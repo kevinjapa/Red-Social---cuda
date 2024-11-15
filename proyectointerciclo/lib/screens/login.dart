@@ -99,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             SizedBox(height: 20.0),
             ElevatedButton(
-              onPressed: () => Navigator.pushReplacementNamed(context, '/home'), 
+              onPressed: () => Navigator.pushReplacementNamed(context, '/registro'), 
               child: Text("Registro")
             ),
           ],

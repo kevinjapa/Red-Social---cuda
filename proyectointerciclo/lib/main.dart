@@ -38,7 +38,7 @@ import 'src/settings/settings_controller.dart';
 import 'src/settings/settings_service.dart';
 import 'screens/home.dart';
 import 'screens/login.dart'; // Asegúrate de que la ruta sea correcta
-
+import 'screens/register.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -64,7 +64,9 @@ class MyApp extends StatelessWidget {
       initialRoute: '/login', // Configura la pantalla de Login como inicial
       routes: {
         '/login': (context) => LoginScreen(),
-        '/home': (context) => Home(), // Ruta para la pantalla principal
+        '/registro': (context) => Registro(),
+        '/home': (context) => Home(), 
+        // Ruta para la pantalla principal
       },
     );
   }
