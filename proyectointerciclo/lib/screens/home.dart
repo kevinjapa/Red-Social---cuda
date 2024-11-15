@@ -5,10 +5,10 @@ class Home extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Home Screen'),
+        title: Text('Inicio'),
       ),
       body: Center(
-        child: Text('Welcome to the Home Screen'),
+        child: Text('Proximamente'),
       ),
     );
   }

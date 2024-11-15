@@ -28,11 +28,14 @@ def register():
         conn.commit()
         cur.close()
         conn.close()
-        return jsonify({"message": "Usuario registrado con éxito"}), 201
+        # return jsonify({"message": "Usuario registrado con éxito"}), 201
+        return jsonify({"success": True, "message": "Usuario registrado con éxito"}), 201
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        # return jsonify({"error": str(e)}), 400
+        return jsonify({"success": False, "error": str(e)}), 400
 
-# Ruta de login
+
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
