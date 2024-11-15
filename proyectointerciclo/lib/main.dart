@@ -33,6 +33,7 @@
 // }
 
 import 'package:flutter/material.dart';
+import 'package:proyectointerciclo/screens/filtro.dart';
 
 import 'src/settings/settings_controller.dart';
 import 'src/settings/settings_service.dart';
@@ -61,12 +62,11 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      initialRoute: '/login', // Configura la pantalla de Login como inicial
+      initialRoute: '/login',
       routes: {
         '/login': (context) => LoginScreen(),
         '/registro': (context) => Registro(),
-        '/home': (context) => Home(), 
-        // Ruta para la pantalla principal
+        '/home': (context) => Home(),  
       },
     );
   }

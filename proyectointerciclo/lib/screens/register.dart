@@ -13,7 +13,7 @@ class _RegistroScreenState extends State<Registro> {
     final String username = _usernameController.text;
     final String password = _passwordController.text;
 
-    final String url = 'http://192.168.0.105:5001/register';
+    final String url = 'http://192.168.8.112:5001/register';
 
     try {
       final response = await http.post(
@@ -35,11 +35,11 @@ class _RegistroScreenState extends State<Registro> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Usuario Registrado'), 
-                duration: Duration(seconds: 2), 
+                duration: Duration(seconds: 1), 
                 backgroundColor: Color.fromARGB(255, 150, 185, 246),
               ),
             );
-            await Future.delayed(Duration(seconds: 2));
+            await Future.delayed(Duration(seconds: 1));
             Navigator.pushReplacementNamed(context, '/login');
           
         } else {
@@ -86,7 +86,7 @@ class _RegistroScreenState extends State<Registro> {
           children: [
             TextField(
               controller: _usernameController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Username',
                 border: OutlineInputBorder(),
               ),
@@ -94,7 +94,7 @@ class _RegistroScreenState extends State<Registro> {
             SizedBox(height: 16.0),
             TextField(
               controller: _passwordController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Password',
                 border: OutlineInputBorder(),
               ),

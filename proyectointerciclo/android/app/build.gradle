@@ -9,6 +9,8 @@ android {
     namespace = "com.example.proyectointerciclo"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+    // compileSdk = 33
+    // ndkVersion = "21.3.6528147" 
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -24,10 +26,14 @@ android {
         applicationId = "com.example.proyectointerciclo"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        // minSdk = flutter.minSdkVersion
+        // targetSdk = flutter.targetSdkVersion
+        // versionCode = flutter.versionCode
+        // versionName = flutter.versionName
+        minSdk = 21
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
     }
 
     buildTypes {
