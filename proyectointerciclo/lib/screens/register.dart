@@ -31,24 +31,16 @@ class _RegistroScreenState extends State<Registro> {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
 
         if (responseData['success'] == true) {
-            showDialog(
-            context: context,
-            builder: (context) {
-              return AlertDialog(
-                // title: Text(''),
-                content: Text("Usuario Registrado"),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: Text('OK'),
-                  ),
-                ],
-              );
-              Navigator.pushReplacementNamed(context, '/login');
-            },
-          );
+            // Muestra el SnackBar usando ScaffoldMessenger
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Usuario Registrado'), 
+                duration: Duration(seconds: 2), 
+                backgroundColor: Color.fromARGB(255, 150, 185, 246),
+              ),
+            );
+            await Future.delayed(Duration(seconds: 2));
+            Navigator.pushReplacementNamed(context, '/login');
           
         } else {
           _showError(responseData['message'] ?? 'Error al Registrar');

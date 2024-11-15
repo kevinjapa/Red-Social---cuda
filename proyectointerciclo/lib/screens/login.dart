@@ -33,7 +33,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
         final Map<String, dynamic> responseData = jsonDecode(response.body);
         if (responseData['success'] == true) {
-          Navigator.pushReplacementNamed(context, '/home');
+          // Navigator.pushReplacementNamed(context, '/home');
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Bienvenido ' + username), 
+                duration: Duration(seconds: 2), 
+                backgroundColor: Color.fromARGB(255, 150, 185, 246),
+              ),
+            );
+            await Future.delayed(Duration(seconds: 2));
+            Navigator.pushReplacementNamed(context, '/home');
         } else {
           _showError('Credenciales incorrectas');
         }
