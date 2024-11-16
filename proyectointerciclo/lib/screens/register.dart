@@ -6,10 +6,15 @@ class Registro extends StatefulWidget {
   _RegistroScreenState createState() => _RegistroScreenState();
 }
 class _RegistroScreenState extends State<Registro> {
+  final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _apellidoController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+
   Future<void> _registro() async {
+    final String nombre = _nombreController.text;
+    final String apellido = _apellidoController.text;
     final String username = _usernameController.text;
     final String password = _passwordController.text;
 
@@ -85,9 +90,26 @@ class _RegistroScreenState extends State<Registro> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextField(
+              controller: _nombreController,
+              decoration: const InputDecoration(
+                labelText: 'Nombre ',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 16.0),
+            TextField(
+              controller: _apellidoController,
+              decoration: const InputDecoration(
+                labelText: 'Apellido',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 16.0),
+            
+            TextField(
               controller: _usernameController,
               decoration: const InputDecoration(
-                labelText: 'Username',
+                labelText: 'Correo',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -101,6 +123,7 @@ class _RegistroScreenState extends State<Registro> {
               obscureText: true,
             ),
             SizedBox(height: 20.0),
+
             ElevatedButton(
               onPressed: _registro,
               child: Text('Registro'),
