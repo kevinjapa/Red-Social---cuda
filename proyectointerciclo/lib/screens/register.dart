@@ -13,7 +13,7 @@ class _RegistroScreenState extends State<Registro> {
     final String username = _usernameController.text;
     final String password = _passwordController.text;
 
-    final String url = 'http://172.20.10.3:5001/register';
+    final String url = 'http://192.168.0.109:5001/register';
 
     try {
       final response = await http.post(

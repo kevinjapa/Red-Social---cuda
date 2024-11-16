@@ -11,7 +11,7 @@ class Filtro extends StatefulWidget {
 }
 
 class _FiltroScreenState extends State<Filtro> {
-  String _selectedFilter = 'Original'; // Filtro seleccionado
+  String _selectedFilter = 'Original';
 
   @override
   Widget build(BuildContext context) {
@@ -30,22 +30,21 @@ class _FiltroScreenState extends State<Filtro> {
             ),
           ),
           Expanded(
-            child: Image.file(widget.image), // Muestra la imagen seleccionada
+            child: Image.file(widget.image),
           ),
           Expanded(
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
                 _filterButton('Original'),
-                _filterButton('Blanco y Negro'),
-                _filterButton('Sepia'),
-                _filterButton('Invertido'),
+                _filterButton('Gabor'),
+                _filterButton('Emboss'),
+                _filterButton('High Boost'),
               ],
             ),
           ),
           ElevatedButton(
             onPressed: () {
-              // Aplica el filtro (en este caso, solo muestra el filtro seleccionado)
               print('Aplicar filtro: $_selectedFilter');
             },
             child: Text('Aplicar Filtro'),
