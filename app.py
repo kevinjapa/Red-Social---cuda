@@ -23,7 +23,8 @@ def register():
     data = request.get_json()
     username = data['username']
     password = generate_password_hash(data['password'], method='pbkdf2:sha256')  # Cifrado de contraseña
-
+    nombre = data['nombre']
+    apellido = data['apellido']
     try:
         # Verificar si el usuario ya existe
         users_ref = db.collection('users').where('username', '==', username).get()
@@ -33,7 +34,9 @@ def register():
         # Crear nuevo usuario en Firestore
         db.collection('users').add({
             "username": username,
-            "password": password  # Almacenar contraseña cifrada
+            "password": password,  # Almacenar contraseña cifrada
+            "nombre": nombre,
+            "apellido": apellido
         })
         return jsonify({"success": True, "message": "Usuario registrado con éxito"}), 201
     except Exception as e:
@@ -61,7 +64,47 @@ def login():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
+#  devolver datos de ususario
 
+# Ruta para obtener datos del usuario
+@app.route('/user/<username>', methods=['GET'])
+def get_user(username):
+    try:
+        users_ref = db.collection('users').where('username', '==', username).get()
+        if not users_ref:
+            return jsonify({"success": False, "message": "Usuario no encontrado"}), 404
+
+        user = users_ref[0].to_dict()
+        return jsonify({
+            "username": user['username'],
+            "nombre": user['nombre'],
+            "apellido": user['apellido']
+        }), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    
+# cambiar contrasena
+# Ruta para actualizar la contraseña
+@app.route('/update-password', methods=['POST'])
+def update_password():
+    data = request.get_json()
+    username = data['username']
+    new_password = generate_password_hash(data['new_password'], method='pbkdf2:sha256')
+
+    try:
+        users_ref = db.collection('users').where('username', '==', username).get()
+        if not users_ref:
+            return jsonify({"success": False, "message": "Usuario no encontrado"}), 404
+
+        user_id = users_ref[0].id
+        db.collection('users').document(user_id).update({"password": new_password})
+        return jsonify({"success": True, "message": "Contraseña actualizada"}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    
+
+    
+    
 UPLOAD_FOLDER = 'static/uploads/'
 PROCESSED_FOLDER = 'static/processed/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
