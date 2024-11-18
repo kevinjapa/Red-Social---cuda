@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, storage
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 # import pycuda.driver as drv
@@ -9,6 +9,8 @@ from PIL import Image
 import io
 import time
 import numpy as np
+from werkzeug.utils import secure_filename
+
 
 app = Flask(__name__)
 
@@ -103,7 +105,7 @@ def update_password():
         return jsonify({"success": False, "error": str(e)}), 400
     
 
-    
+
     
 UPLOAD_FOLDER = 'static/uploads/'
 PROCESSED_FOLDER = 'static/processed/'
@@ -112,6 +114,59 @@ app.config['PROCESSED_FOLDER'] = PROCESSED_FOLDER
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+
+# Ruta para subir una imagen
+# @app.route('/upload-image', methods=['POST'])
+# def upload_image():
+#     if 'file' not in request.files:
+#         return jsonify({"success": False, "message": "No se encontró el archivo"}), 400
+
+#     file = request.files['file']
+
+#     if file.filename == '':
+#         return jsonify({"success": False, "message": "No se seleccionó un archivo"}), 400
+
+#     # Guardar el archivo
+#     try:
+#         filename = secure_filename(file.filename)
+#         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+#         file.save(file_path)
+
+#         return jsonify({
+#             "success": True,
+#             "message": "Imagen subida con éxito",
+#             "file_path": file_path
+#         }), 200
+#     except Exception as e:
+#         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/upload-image', methods=['POST'])
+def upload_image():
+    try:
+        # Verificar si hay un archivo en la solicitud
+        if 'file' not in request.files:
+            return jsonify({"success": False, "message": "No se encontró el archivo"}), 400
+
+        file = request.files['file']
+
+        # Validar el nombre del archivo
+        if file.filename == '':
+            return jsonify({"success": False, "message": "No se seleccionó un archivo"}), 400
+
+        # Guardar el archivo de manera segura
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+
+        return jsonify({
+            "success": True,
+            "message": "Imagen subida con éxito",
+            "file_path": file_path
+        }), 200
+
+    except Exception as e:
+        # Captura cualquier error
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # drv.init()
 # device = drv.Device(0)

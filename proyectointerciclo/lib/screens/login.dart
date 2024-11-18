@@ -344,12 +344,12 @@ Future<String> getServerIp() async {
           // Botón de configuración en la esquina superior derecha
           Positioned(
             top: 40,
-            right: 20,
+            right: 15,
             child: IconButton(
               icon: Icon(
                 Icons.settings,
-                color: const Color.fromARGB(255, 132, 155, 249),
-                size: 30,
+                color: const Color.fromARGB(255, 90, 90, 90),
+                size: 25,
               ),
               onPressed: () {
                 Navigator.pushNamed(context, '/settings');

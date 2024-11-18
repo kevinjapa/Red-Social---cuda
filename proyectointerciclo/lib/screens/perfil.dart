@@ -29,7 +29,7 @@ class _PerfilScreenState extends State<Perfil> {
   Future<String> getServerIp() async {
   final prefs = await SharedPreferences.getInstance();
   return prefs.getString('server_ip') ?? 'default_ip_here';
-}
+  }
   Future<void> _fetchUserData() async {
     setState(() {
       _isLoading = true;

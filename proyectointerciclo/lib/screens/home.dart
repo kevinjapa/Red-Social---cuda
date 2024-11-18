@@ -125,7 +125,7 @@ class _HomeState extends State<Home> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => Filtro(image: File(pickedFile.path)),
+            builder: (context) => Filtro(image: File(pickedFile.path), username: widget.username),
           ),
         );
       }
