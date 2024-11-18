@@ -144,7 +144,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
+import 'package:shared_preferences/shared_preferences.dart';
 class Registro extends StatefulWidget {
   @override
   _RegistroScreenState createState() => _RegistroScreenState();
@@ -156,17 +156,23 @@ class _RegistroScreenState extends State<Registro> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  Future<String> getServerIp() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getString('server_ip') ?? 'default_ip_here';
+}
   Future<void> _registro() async {
     final String nombre = _nombreController.text;
     final String apellido = _apellidoController.text;
     final String username = _usernameController.text;
     final String password = _passwordController.text;
 
-    final String url = 'http://172.20.10.3:5001/register';
+    // final String url = 'http://172.20.10.3:5001/register';
 
     try {
+      final serverIp = await getServerIp();
       final response = await http.post(
-        Uri.parse(url),
+        // Uri.parse(url),
+        Uri.parse('http://$serverIp:5001/register'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },

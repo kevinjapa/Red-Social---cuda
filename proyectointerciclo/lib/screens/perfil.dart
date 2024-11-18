@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Perfil extends StatefulWidget {
   final String username;
@@ -25,15 +26,20 @@ class _PerfilScreenState extends State<Perfil> {
     super.initState();
     _fetchUserData();
   }
-
+  Future<String> getServerIp() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getString('server_ip') ?? 'default_ip_here';
+}
   Future<void> _fetchUserData() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
+      final serverIp = await getServerIp();
       final response = await http.get(
-        Uri.parse('http://172.20.10.3:5001/user/${widget.username}'),
+        // Uri.parse('http://192.168.0.104:5001/user/${widget.username}'),
+         Uri.parse('http://$serverIp:5001/user/${widget.username}'),
       );
 
       if (response.statusCode == 200) {
@@ -64,8 +70,11 @@ class _PerfilScreenState extends State<Perfil> {
     }
 
     try {
+      final serverIp = await getServerIp();
       final response = await http.post(
-        Uri.parse('http://localhost:5000/update-password'),
+        
+        // Uri.parse('http://192.168.0.104:5001/update-password'),
+         Uri.parse('http://$serverIp:5001/update-password'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'username': widget.username,

@@ -34,6 +34,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:proyectointerciclo/screens/filtro.dart';
+import 'package:proyectointerciclo/screens/settings.dart';
 
 import 'src/settings/settings_controller.dart';
 import 'src/settings/settings_service.dart';
@@ -66,6 +67,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => LoginScreen(),
         '/registro': (context) => Registro(),
+        '/settings':(context) => Settings(),
         // '/home': (context) => Home(),  
       },
     );

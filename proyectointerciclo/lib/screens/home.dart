@@ -144,7 +144,7 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Aplicación'),
+        title: Text('Instagram'),
       ),
       body: _pages[_selectedIndex],
       floatingActionButton: FloatingActionButton(
