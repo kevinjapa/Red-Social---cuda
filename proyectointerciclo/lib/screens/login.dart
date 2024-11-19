@@ -213,7 +213,7 @@ Future<String> getServerIp() async {
             duration: Duration(seconds: 2),
             backgroundColor: Color.fromARGB(255, 150, 185, 246),
           ));
-          await Future.delayed(Duration(seconds: 2));
+          await Future.delayed(Duration(seconds: 0));
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -256,7 +256,6 @@ Future<String> getServerIp() async {
     return Scaffold(
       body: Stack(
         children: [
-          // Contenido principal
           Container(
             decoration: BoxDecoration(),
             child: Center(

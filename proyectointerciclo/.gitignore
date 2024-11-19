@@ -42,3 +42,4 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 app-social-media-552ea-firebase-adminsdk-jc51c-746b9b24f5.json
+/static/
