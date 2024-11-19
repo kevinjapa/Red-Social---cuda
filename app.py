@@ -10,10 +10,11 @@ import io
 import time
 import numpy as np
 from werkzeug.utils import secure_filename
-
+from flask import send_from_directory
+from flask_cors import CORS
 
 app = Flask(__name__)
-
+CORS(app)
 # Inicializar Firebase
 cred = credentials.Certificate("/Users/kevinjapa/Desktop/Materia/Computacion Paralela/proyectoInterciclo/app-social-media-552ea-firebase-adminsdk-jc51c-746b9b24f5.json")  # Asegúrate de colocar tu archivo de clave JSON aquí
 firebase_admin.initialize_app(cred)
@@ -44,7 +45,6 @@ def register():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
-# Ruta de inicio de sesión
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -52,12 +52,10 @@ def login():
     password = data['password']
 
     try:
-        # Buscar usuario en Firestore
         users_ref = db.collection('users').where('username', '==', username).get()
         if not users_ref:
             return jsonify({"success": False, "message": "Usuario no encontrado"}), 401
 
-        # Comparar contraseñas
         user = users_ref[0].to_dict()
         if check_password_hash(user['password'], password):
             return jsonify({"success": True, "message": "Inicio de sesión exitoso"}), 200
@@ -66,9 +64,6 @@ def login():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
-#  devolver datos de ususario
-
-# Ruta para obtener datos del usuario
 @app.route('/user/<username>', methods=['GET'])
 def get_user(username):
     try:
@@ -84,9 +79,7 @@ def get_user(username):
         }), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
-    
-# cambiar contrasena
-# Ruta para actualizar la contraseña
+
 @app.route('/update-password', methods=['POST'])
 def update_password():
     data = request.get_json()
@@ -104,9 +97,6 @@ def update_password():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
     
-
-
-    
 UPLOAD_FOLDER = 'static/uploads/'
 PROCESSED_FOLDER = 'static/processed/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -115,19 +105,17 @@ app.config['PROCESSED_FOLDER'] = PROCESSED_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-# Ruta para subir una imagen
 # @app.route('/upload-image', methods=['POST'])
 # def upload_image():
-#     if 'file' not in request.files:
-#         return jsonify({"success": False, "message": "No se encontró el archivo"}), 400
-
-#     file = request.files['file']
-
-#     if file.filename == '':
-#         return jsonify({"success": False, "message": "No se seleccionó un archivo"}), 400
-
-#     # Guardar el archivo
 #     try:
+#         if 'file' not in request.files:
+#             return jsonify({"success": False, "message": "No se encontró el archivo"}), 400
+
+#         file = request.files['file']
+
+#         if file.filename == '':
+#             return jsonify({"success": False, "message": "No se seleccionó un archivo"}), 400
+
 #         filename = secure_filename(file.filename)
 #         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 #         file.save(file_path)
@@ -137,25 +125,31 @@ os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 #             "message": "Imagen subida con éxito",
 #             "file_path": file_path
 #         }), 200
+
 #     except Exception as e:
 #         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/upload-image', methods=['POST'])
 def upload_image():
     try:
-        # Verificar si hay un archivo en la solicitud
+        username = request.form.get('username')  # Asegúrate de que Flutter envía el nombre de usuario
+        if not username:
+            return jsonify({"success": False, "message": "Falta el nombre de usuario"}), 400
+
         if 'file' not in request.files:
             return jsonify({"success": False, "message": "No se encontró el archivo"}), 400
 
         file = request.files['file']
 
-        # Validar el nombre del archivo
         if file.filename == '':
             return jsonify({"success": False, "message": "No se seleccionó un archivo"}), 400
 
-        # Guardar el archivo de manera segura
+        # Crear carpeta para el usuario si no existe
+        user_folder = os.path.join(app.config['UPLOAD_FOLDER'], username)
+        os.makedirs(user_folder, exist_ok=True)
+
         filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file_path = os.path.join(user_folder, filename)
         file.save(file_path)
 
         return jsonify({
@@ -165,8 +159,29 @@ def upload_image():
         }), 200
 
     except Exception as e:
-        # Captura cualquier error
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/user-images/<username>', methods=['GET'])
+def get_user_images(username):
+    try:
+        # Aquí suponemos que los nombres de los archivos subidos incluyen información del usuario
+        user_folder = os.path.join(app.config['UPLOAD_FOLDER'], username)
+        if not os.path.exists(user_folder):
+            return jsonify({"success": False, "message": "No hay imágenes para este usuario"}), 404
+
+        # Listar todos los archivos en la carpeta del usuario
+        images = os.listdir(user_folder)
+        image_urls = [f"/static/uploads/{username}/{img}" for img in images]
+
+        return jsonify({"success": True, "images": image_urls}), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/static/uploads/<path:filename>')
+def serve_image(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # drv.init()
 # device = drv.Device(0)

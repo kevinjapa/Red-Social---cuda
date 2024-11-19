@@ -14,41 +14,79 @@ class Filtro extends StatefulWidget {
   @override
   _FiltroScreenState createState() => _FiltroScreenState();
 }
-
 class _FiltroScreenState extends State<Filtro> {
   String _selectedFilter = 'Original';
   Future<String> getServerIp() async {
   final prefs = await SharedPreferences.getInstance();
   return prefs.getString('server_ip') ?? 'default_ip_here';
   }
+//   Future<void> uploadImage(File image) async {
+//   final serverIp = await getServerIp();
+//   try {
+//     var request = http.MultipartRequest('POST', 
+//     Uri.parse('http://$serverIp:5001/upload-image'),);
+
+//     // Adjuntar archivo
+//     var file = await http.MultipartFile.fromPath(
+//       'file',
+//       image.path,
+//       contentType: MediaType('image', 'jpeg'),
+//     );
+//     request.files.add(file);
+//     var response = await request.send();
+//     if (response.statusCode == 200) {
+//       var responseData = await http.Response.fromStream(response);
+//       print('Upload successful: ${responseData.body}');
+//     } else {
+//       print('Error uploading image: ${response.reasonPhrase}');
+//     }
+//   } catch (e) {
+//     print('Error: $e');
+//   }
+// }
   Future<void> uploadImage(File image) async {
-  final serverIp = await getServerIp();
-  // final String url = 'http://192.168.0.106:5001/upload-image';
+  final serverIp = await getServerIp(); // Obtener la IP del servidor desde SharedPreferences
+  final String url = 'http://$serverIp:5001/upload-image';
 
   try {
-    var request = http.MultipartRequest('POST', 
-    Uri.parse('http://$serverIp:5001/upload-image'),);
+    // Crear solicitud Multipart para enviar la imagen y el usuario
+    var request = http.MultipartRequest('POST', Uri.parse(url));
 
-    // Adjuntar archivo
+    // Adjuntar archivo de imagen
     var file = await http.MultipartFile.fromPath(
-      'file',
+      'file', // El campo debe coincidir con el nombre esperado en el backend
       image.path,
       contentType: MediaType('image', 'jpeg'),
     );
     request.files.add(file);
 
+    // Agregar el nombre de usuario como parte de los datos del formulario
+    request.fields['username'] = widget.username; // Asegúrate de que 'widget.username' contiene el nombre de usuario
+
+    // Enviar la solicitud
     var response = await request.send();
 
+    // Manejar la respuesta del servidor
     if (response.statusCode == 200) {
       var responseData = await http.Response.fromStream(response);
       print('Upload successful: ${responseData.body}');
+      ScaffoldMessenger.of(context as BuildContext).showSnackBar(
+        SnackBar(content: Text('Imagen subida con éxito')),
+      );
     } else {
       print('Error uploading image: ${response.reasonPhrase}');
+      ScaffoldMessenger.of(context as BuildContext).showSnackBar(
+        SnackBar(content: Text('Error al subir la imagen')),
+      );
     }
   } catch (e) {
     print('Error: $e');
+    ScaffoldMessenger.of(context as BuildContext).showSnackBar(
+      SnackBar(content: Text('Error al conectar con el servidor')),
+    );
   }
 }
+
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +130,6 @@ class _FiltroScreenState extends State<Filtro> {
                   SizedBox(
                     width: 100,
                     height: 100,
-                    // child: _filterButton("Original"),
                     child: FittedBox(
                       child: _filterButton('Gabor'),
                     ),
@@ -100,7 +137,6 @@ class _FiltroScreenState extends State<Filtro> {
                   SizedBox(
                     width: 100,
                     height: 100,
-                    // child: _filterButton("Original"),
                     child: FittedBox(
                       child: _filterButton('Emboss'),
                     ),
@@ -108,15 +144,10 @@ class _FiltroScreenState extends State<Filtro> {
                   SizedBox(
                     width: 100,
                     height: 100,
-                    // child: _filterButton("Original"),
                     child: FittedBox(
                       child: _filterButton('High Boost'),
                     ),
                   )
-                  // _filterButton('Original'),
-                  // _filterButton('Gabor'),
-                  // _filterButton('Emboss'),
-                  // _filterButton('High Boost'),
                 ],
               ),
             ),
@@ -131,7 +162,6 @@ class _FiltroScreenState extends State<Filtro> {
       ),
     );
   }
-
   Widget _filterButton(String filterName) {
     return GestureDetector(
       onTap: () {
@@ -140,8 +170,6 @@ class _FiltroScreenState extends State<Filtro> {
         });
       },
       child: Container(
-        // width: 40,
-        // height: 40,
         margin: EdgeInsets.symmetric(horizontal: 10),
         padding: EdgeInsets.all(8),
         decoration: BoxDecoration(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:proyectointerciclo/screens/feel.dart';
 import 'package:proyectointerciclo/screens/settings.dart';
 import 'dart:io';
 import 'filtro.dart'; // Asegúrate de importar la nueva pantalla
@@ -24,7 +25,8 @@ class _HomeState extends State<Home> {
   void initState() {
     super.initState();
     _pages = [
-      Center(child: Text(widget.username, style: TextStyle(fontSize: 24))),
+      feel(username: widget.username),
+      // Center(child: Text(widget.username, style: TextStyle(fontSize: 24))),
       Perfil(username: widget.username), // Pasa el username al perfil
       // Center(child: Text('Configuración', style: TextStyle(fontSize: 24))),
       Settings(),
