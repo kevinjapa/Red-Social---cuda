@@ -16,20 +16,22 @@ class _PerfilScreenState extends State<Perfil> {
   TextEditingController _nombreController = TextEditingController();
   TextEditingController _apellidoController = TextEditingController();
   TextEditingController _correoController = TextEditingController();
-  TextEditingController _passwordController = TextEditingController();
-  TextEditingController _newPasswordController = TextEditingController();
 
   bool _isLoading = false;
+  List<String> _imageUrls = [];
 
   @override
   void initState() {
     super.initState();
     _fetchUserData();
+    _fetchUserImages(); // También obtendremos las imágenes al iniciar
   }
+
   Future<String> getServerIp() async {
-  final prefs = await SharedPreferences.getInstance();
-  return prefs.getString('server_ip') ?? 'default_ip_here';
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('server_ip') ?? 'default_ip_here';
   }
+
   Future<void> _fetchUserData() async {
     setState(() {
       _isLoading = true;
@@ -38,8 +40,7 @@ class _PerfilScreenState extends State<Perfil> {
     try {
       final serverIp = await getServerIp();
       final response = await http.get(
-        // Uri.parse('http://192.168.0.104:5001/user/${widget.username}'),
-         Uri.parse('http://$serverIp:5001/user/${widget.username}'),
+        Uri.parse('http://$serverIp:5001/user/${widget.username}'),
       );
 
       if (response.statusCode == 200) {
@@ -61,35 +62,23 @@ class _PerfilScreenState extends State<Perfil> {
     }
   }
 
-  Future<void> _updatePassword() async {
-    if (_newPasswordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('La nueva contraseña no puede estar vacía')),
-      );
-      return;
-    }
+  Future<void> _fetchUserImages() async {
+    final String serverIp = await getServerIp();
+    final url = 'http://$serverIp:5001/user-images/${widget.username}';
 
     try {
-      final serverIp = await getServerIp();
-      final response = await http.post(
-        
-        // Uri.parse('http://192.168.0.104:5001/update-password'),
-         Uri.parse('http://$serverIp:5001/update-password'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'username': widget.username,
-          'new_password': _newPasswordController.text,
-        }),
-      );
+      final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Contraseña actualizada con éxito')),
-        );
+        final data = json.decode(response.body);
+
+        // Construir URLs absolutas
+        setState(() {
+          _imageUrls = List<String>.from(
+              data['images'].map((url) => 'http://$serverIp:5001$url'));
+        });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al actualizar la contraseña')),
-        );
+        print('Error al obtener imágenes: ${response.reasonPhrase}');
       }
     } catch (e) {
       print('Error: $e');
@@ -100,50 +89,91 @@ class _PerfilScreenState extends State<Perfil> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Perfil de Usuario'),
+        // title: Text('Perfil'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: () {
+              // Lógica para cerrar sesión
+              Navigator.pushReplacementNamed(context, '/login');
+            },
+          ),
+        ],
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
+          : SingleChildScrollView(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  TextField(
-                    controller: _nombreController,
-                    decoration: InputDecoration(labelText: 'Nombre'),
-                    readOnly: true,
+                  // Información del usuario
+                  Padding(
+                    padding: const EdgeInsets.all(10.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(height: 1),
+                        Text(
+                          '${_nombreController.text} ${_apellidoController.text}',
+                          style: TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 5),
+                        Text(
+                          '${_correoController.text}',
+                          style: TextStyle(
+                              fontSize: 16, color: Colors.grey[600]),
+                        ),
+                        SizedBox(height: 15),
+                        Divider(thickness: 1),
+                        // Opción de cambiar contraseña
+                        ListTile(
+                          leading: Icon(Icons.lock_outline),
+                          title: Text('Cambiar Contraseña'),
+                          trailing: Icon(Icons.arrow_forward_ios),
+                          onTap: () {
+                            Navigator.pushNamed(context, '/change-password');
+                          },
+                        ),
+                        Divider(thickness: 1),
+                      ],
+                    ),
                   ),
-                  SizedBox(height: 10),
-                  TextField(
-                    controller: _apellidoController,
-                    decoration: InputDecoration(labelText: 'Apellido'),
-                    readOnly: true,
-                  ),
-                  SizedBox(height: 10),
-                  TextField(
-                    controller: _correoController,
-                    decoration: InputDecoration(labelText: 'Correo'),
-                    readOnly: true,
-                  ),
-                  SizedBox(height: 20),
-                  TextField(
-                    controller: _passwordController,
-                    decoration: InputDecoration(labelText: 'Contraseña'),
-                    obscureText: true,
-                    readOnly: true,
-                  ),
-                  SizedBox(height: 20),
-                  TextField(
-                    controller: _newPasswordController,
-                    decoration: InputDecoration(labelText: 'Nueva Contraseña'),
-                    obscureText: true,
-                  ),
-                  SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _updatePassword,
-                    child: Text('Actualizar Contraseña'),
-                  ),
+                  // Galería de imágenes
+                  _imageUrls.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Text(
+                              "No hay publicaciones todavía",
+                              style: TextStyle(
+                                  color: Colors.grey, fontSize: 16),
+                            ),
+                          ),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: GridView.builder(
+                            shrinkWrap: true, // Esto asegura que GridView funcione dentro de SingleChildScrollView
+                            physics: NeverScrollableScrollPhysics(), // Evita que GridView tenga su propio scroll
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 4.0,
+                              mainAxisSpacing: 4.0,
+                            ),
+                            itemCount: _imageUrls.length,
+                            itemBuilder: (context, index) {
+                              return Image.network(
+                                _imageUrls[index],
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Icon(Icons.error);
+                                },
+                              );
+                            },
+                          ),
+                        ),
                 ],
               ),
             ),

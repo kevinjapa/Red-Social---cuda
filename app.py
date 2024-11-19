@@ -105,30 +105,6 @@ app.config['PROCESSED_FOLDER'] = PROCESSED_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-# @app.route('/upload-image', methods=['POST'])
-# def upload_image():
-#     try:
-#         if 'file' not in request.files:
-#             return jsonify({"success": False, "message": "No se encontró el archivo"}), 400
-
-#         file = request.files['file']
-
-#         if file.filename == '':
-#             return jsonify({"success": False, "message": "No se seleccionó un archivo"}), 400
-
-#         filename = secure_filename(file.filename)
-#         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-#         file.save(file_path)
-
-#         return jsonify({
-#             "success": True,
-#             "message": "Imagen subida con éxito",
-#             "file_path": file_path
-#         }), 200
-
-#     except Exception as e:
-#         return jsonify({"success": False, "error": str(e)}), 500
-
 @app.route('/upload-image', methods=['POST'])
 def upload_image():
     try:
@@ -182,6 +158,84 @@ def get_user_images(username):
 @app.route('/static/uploads/<path:filename>')
 def serve_image(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+# @app.route('/feed', methods=['GET'])
+# def get_feed():
+#     try:
+#         # Recolectar imágenes de todos los usuarios
+#         all_images = []
+
+#         # Buscar todas las carpetas dentro de 'static/uploads' (carpetas de usuarios)
+#         for username_folder in os.listdir(app.config['UPLOAD_FOLDER']):
+#             user_folder = os.path.join(app.config['UPLOAD_FOLDER'], username_folder)
+#             if os.path.isdir(user_folder):
+#                 # Obtener información del usuario desde Firestore
+#                 users_ref = db.collection('users').where('username', '==', username_folder).get()
+#                 if not users_ref:
+#                     continue  # Si no se encuentra el usuario, ignorar esta carpeta
+
+#                 user_data = users_ref[0].to_dict()
+
+#                 # Listar todas las imágenes del usuario
+#                 images = os.listdir(user_folder)
+#                 for img in images:
+#                     all_images.append({
+#                         "username": user_data['username'],
+#                         "nombre": user_data['nombre'],
+#                         "apellido": user_data['apellido'],
+#                         "imageUrl": f"/static/uploads/{username_folder}/{img}",
+#                         "description": f"Publicación de {user_data['nombre']} {user_data['apellido']}"
+#                     })
+
+#         # Ordenar las imágenes por nombre de archivo (puedes personalizar esta lógica)
+#         all_images = sorted(all_images, key=lambda x: x['imageUrl'])
+
+#         return jsonify({"success": True, "posts": all_images}), 200
+
+#     except Exception as e:
+#         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/feed', methods=['GET'])
+def get_feed():
+    try:
+        # Ruta base de uploads
+        uploads_path = app.config['UPLOAD_FOLDER']
+        if not os.path.exists(uploads_path):
+            return jsonify({"success": False, "message": "No se encontró el directorio de uploads"}), 404
+
+        # Recolectar imágenes de todos los usuarios
+        all_images = []
+
+        # Buscar carpetas de usuarios en 'static/uploads'
+        for username_folder in os.listdir(uploads_path):
+            user_folder = os.path.join(uploads_path, username_folder)
+            if os.path.isdir(user_folder):
+                # Buscar información del usuario en Firestore
+                users_ref = db.collection('users').where('username', '==', username_folder).get()
+                if not users_ref:
+                    continue  # Ignorar carpetas sin usuario válido
+
+                user_data = users_ref[0].to_dict()
+
+                # Listar todas las imágenes del usuario
+                for img in os.listdir(user_folder):
+                    if os.path.isfile(os.path.join(user_folder, img)):
+                        all_images.append({
+                            "username": user_data['username'],
+                            "nombre": user_data['nombre'],
+                            "apellido": user_data['apellido'],
+                            "imageUrl": f"/static/uploads/{username_folder}/{img}",
+                            "description": f"Publicación de {user_data['nombre']} {user_data['apellido']}"
+                        })
+
+        # Ordenar imágenes (opcional)
+        all_images = sorted(all_images, key=lambda x: x['imageUrl'])
+
+        return jsonify({"success": True, "posts": all_images}), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 # drv.init()
 # device = drv.Device(0)
