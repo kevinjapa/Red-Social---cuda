@@ -25,7 +25,7 @@ class _HomeState extends State<Home> {
   void initState() {
     super.initState();
     _pages = [
-      Feel(username: widget.username),
+      Feed(username: widget.username),
       Perfil(username: widget.username), // Pasa el username al perfil
       Settings(),
     ];

@@ -12,6 +12,7 @@ import numpy as np
 from werkzeug.utils import secure_filename
 from flask import send_from_directory
 from flask_cors import CORS
+import random
 
 app = Flask(__name__)
 CORS(app)
@@ -162,32 +163,37 @@ def serve_image(filename):
 # @app.route('/feed', methods=['GET'])
 # def get_feed():
 #     try:
+#         # Ruta base de uploads
+#         uploads_path = app.config['UPLOAD_FOLDER']
+#         if not os.path.exists(uploads_path):
+#             return jsonify({"success": False, "message": "No se encontró el directorio de uploads"}), 404
+
 #         # Recolectar imágenes de todos los usuarios
 #         all_images = []
 
-#         # Buscar todas las carpetas dentro de 'static/uploads' (carpetas de usuarios)
-#         for username_folder in os.listdir(app.config['UPLOAD_FOLDER']):
-#             user_folder = os.path.join(app.config['UPLOAD_FOLDER'], username_folder)
+#         # Buscar carpetas de usuarios en 'static/uploads'
+#         for username_folder in os.listdir(uploads_path):
+#             user_folder = os.path.join(uploads_path, username_folder)
 #             if os.path.isdir(user_folder):
-#                 # Obtener información del usuario desde Firestore
+#                 # Buscar información del usuario en Firestore
 #                 users_ref = db.collection('users').where('username', '==', username_folder).get()
 #                 if not users_ref:
-#                     continue  # Si no se encuentra el usuario, ignorar esta carpeta
+#                     continue  # Ignorar carpetas sin usuario válido
 
 #                 user_data = users_ref[0].to_dict()
 
 #                 # Listar todas las imágenes del usuario
-#                 images = os.listdir(user_folder)
-#                 for img in images:
-#                     all_images.append({
-#                         "username": user_data['username'],
-#                         "nombre": user_data['nombre'],
-#                         "apellido": user_data['apellido'],
-#                         "imageUrl": f"/static/uploads/{username_folder}/{img}",
-#                         "description": f"Publicación de {user_data['nombre']} {user_data['apellido']}"
-#                     })
+#                 for img in os.listdir(user_folder):
+#                     if os.path.isfile(os.path.join(user_folder, img)):
+#                         all_images.append({
+#                             "username": user_data['username'],
+#                             "nombre": user_data['nombre'],
+#                             "apellido": user_data['apellido'],
+#                             "imageUrl": f"/static/uploads/{username_folder}/{img}",
+#                             "description": f"Publicación de {user_data['nombre']} {user_data['apellido']}"
+#                         })
 
-#         # Ordenar las imágenes por nombre de archivo (puedes personalizar esta lógica)
+#         # Ordenar imágenes (opcional)
 #         all_images = sorted(all_images, key=lambda x: x['imageUrl'])
 
 #         return jsonify({"success": True, "posts": all_images}), 200
@@ -218,18 +224,36 @@ def get_feed():
                 user_data = users_ref[0].to_dict()
 
                 # Listar todas las imágenes del usuario
+                user_images = []
                 for img in os.listdir(user_folder):
-                    if os.path.isfile(os.path.join(user_folder, img)):
-                        all_images.append({
+                    img_path = os.path.join(user_folder, img)
+                    if os.path.isfile(img_path):
+                        # Obtener la fecha de modificación de la imagen
+                        creation_time = os.path.getmtime(img_path)
+                        user_images.append({
                             "username": user_data['username'],
                             "nombre": user_data['nombre'],
                             "apellido": user_data['apellido'],
                             "imageUrl": f"/static/uploads/{username_folder}/{img}",
-                            "description": f"Publicación de {user_data['nombre']} {user_data['apellido']}"
+                            "description": f"Publicación de {user_data['nombre']} {user_data['apellido']}",
+                            "timestamp": creation_time  # Timestamp para ordenarlas después
                         })
 
-        # Ordenar imágenes (opcional)
-        all_images = sorted(all_images, key=lambda x: x['imageUrl'])
+                # Ordenar imágenes del usuario por fecha (más recientes primero)
+                user_images.sort(key=lambda x: x['timestamp'], reverse=True)
+
+                # Agregar la última publicación al inicio
+                if user_images:
+                    all_images.append(user_images[0])  # Agregar la última publicación primero
+
+                # Mezclar aleatoriamente el resto de las imágenes y agregarlas
+                if len(user_images) > 1:
+                    remaining_images = user_images[1:]
+                    random.shuffle(remaining_images)
+                    all_images.extend(remaining_images)
+
+        # Ordenar la lista final por fecha (las más recientes primero)
+        all_images.sort(key=lambda x: x['timestamp'], reverse=True)
 
         return jsonify({"success": True, "posts": all_images}), 200
 

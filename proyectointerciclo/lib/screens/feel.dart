@@ -3,16 +3,15 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-class Feel extends StatefulWidget {
+class Feed extends StatefulWidget {
   final String username;
 
-  const Feel({Key? key, required this.username}) : super(key: key);
+  const Feed({Key? key, required this.username}) : super(key: key);
 
   @override
   _FeelPageState createState() => _FeelPageState();
 }
-
-class _FeelPageState extends State<Feel> {
+class _FeelPageState extends State<Feed> {
   List<Map<String, dynamic>> _posts = [];
 
   @override
@@ -21,6 +20,10 @@ class _FeelPageState extends State<Feel> {
     _fetchPosts();
   }
 
+  Future<String> getServerIp() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('server_ip') ?? 'default_ip_here';
+  } 
   Future<void> _fetchPosts() async {
     final String serverIp = await SharedPreferences.getInstance()
         .then((prefs) => prefs.getString('server_ip') ?? 'default_ip_here');
@@ -32,7 +35,6 @@ class _FeelPageState extends State<Feel> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
-        // Actualizar la lista de publicaciones
         setState(() {
           _posts = List<Map<String, dynamic>>.from(data['posts']);
         });
@@ -43,29 +45,53 @@ class _FeelPageState extends State<Feel> {
       print('Error: $e');
     }
   }
-
+  
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Inicio'),
-        centerTitle: true,
-      ),
-      body: _posts.isEmpty
-          ? Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: _posts.length,
-              itemBuilder: (context, index) {
-                final post = _posts[index];
-                
-                return PostCard(
-                  username: post['username'],
-                  // imageUrl: 'http://192.168.0.113:5001/feed',
-                  imageUrl: 'http://192.168.0.113:5001${post['imageUrl']}',
-                  description: post['description'],
-                );
-              },
+
+    return FutureBuilder<String>(
+      future: getServerIp(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('Inicio'),
+              centerTitle: true,
             ),
+            body: Center(child: CircularProgressIndicator()),
+          );
+        } else if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('Inicio'),
+              centerTitle: true,
+            ),
+            body: Center(child: Text('Error: ${snapshot.error}')),
+          );
+        } else {
+          final String serverIp = snapshot.data ?? 'default_ip_here';
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('Inicio'),
+              centerTitle: true,
+            ),
+            body: _posts.isEmpty
+                ? Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    itemCount: _posts.length,
+                    itemBuilder: (context, index) {
+                      final post = _posts[index];
+                      
+                      return PostCard(
+                        username: post['username'],
+                        imageUrl: 'http://$serverIp:5001${post['imageUrl']}',
+                        description: post['description'],
+                      );
+                    },
+                  ),
+          );
+        }
+      },
     );
   }
 }
