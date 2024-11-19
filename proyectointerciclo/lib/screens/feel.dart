@@ -61,7 +61,7 @@ class _FeelPageState extends State<Feel> {
                 return PostCard(
                   username: post['username'],
                   // imageUrl: 'http://192.168.0.113:5001/feed',
-                  imageUrl: 'http://192.168.0.113:5001${post['imageUrl']}', // Cambia la IP a la de tu servidor
+                  imageUrl: 'http://192.168.0.113:5001${post['imageUrl']}',
                   description: post['description'],
                 );
               },
