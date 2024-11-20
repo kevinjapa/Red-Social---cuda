@@ -106,6 +106,38 @@ app.config['PROCESSED_FOLDER'] = PROCESSED_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
+# @app.route('/upload-image', methods=['POST'])
+# def upload_image():
+#     try:
+#         username = request.form.get('username')  # Asegúrate de que Flutter envía el nombre de usuario
+#         if not username:
+#             return jsonify({"success": False, "message": "Falta el nombre de usuario"}), 400
+
+#         if 'file' not in request.files:
+#             return jsonify({"success": False, "message": "No se encontró el archivo"}), 400
+
+#         file = request.files['file']
+
+#         if file.filename == '':
+#             return jsonify({"success": False, "message": "No se seleccionó un archivo"}), 400
+
+#         # Crear carpeta para el usuario si no existe
+#         user_folder = os.path.join(app.config['UPLOAD_FOLDER'], username)
+#         os.makedirs(user_folder, exist_ok=True)
+
+#         filename = secure_filename(file.filename)
+#         file_path = os.path.join(user_folder, filename)
+#         file.save(file_path)
+
+#         return jsonify({
+#             "success": True,
+#             "message": "Imagen subida con éxito",
+#             "file_path": file_path
+#         }), 200
+
+#     except Exception as e:
+#         return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/upload-image', methods=['POST'])
 def upload_image():
     try:
@@ -125,14 +157,27 @@ def upload_image():
         user_folder = os.path.join(app.config['UPLOAD_FOLDER'], username)
         os.makedirs(user_folder, exist_ok=True)
 
-        filename = secure_filename(file.filename)
+        # Generar un nombre único para la imagen
+        filename = f"{secure_filename(file.filename)}{int(time.time())}.jpg"
         file_path = os.path.join(user_folder, filename)
         file.save(file_path)
+
+        # Construir la URL de la imagen
+        image_url = f"http://{request.host}/static/uploads/{username}/{filename}"
+
+        # Guardar en Firestore
+        db.collection('posts').add({
+            "username": username,
+            "imageUrl": filename,  # Guarda solo el nombre del archivo
+            "likes": [],  # Lista vacía inicialmente
+            "comments": [],  # Lista vacía inicialmente
+        })
 
         return jsonify({
             "success": True,
             "message": "Imagen subida con éxito",
-            "file_path": file_path
+            "file_path": file_path,
+            "image_url": image_url
         }), 200
 
     except Exception as e:
@@ -159,47 +204,6 @@ def get_user_images(username):
 @app.route('/static/uploads/<path:filename>')
 def serve_image(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
-# @app.route('/feed', methods=['GET'])
-# def get_feed():
-#     try:
-#         # Ruta base de uploads
-#         uploads_path = app.config['UPLOAD_FOLDER']
-#         if not os.path.exists(uploads_path):
-#             return jsonify({"success": False, "message": "No se encontró el directorio de uploads"}), 404
-
-#         # Recolectar imágenes de todos los usuarios
-#         all_images = []
-
-#         # Buscar carpetas de usuarios en 'static/uploads'
-#         for username_folder in os.listdir(uploads_path):
-#             user_folder = os.path.join(uploads_path, username_folder)
-#             if os.path.isdir(user_folder):
-#                 # Buscar información del usuario en Firestore
-#                 users_ref = db.collection('users').where('username', '==', username_folder).get()
-#                 if not users_ref:
-#                     continue  # Ignorar carpetas sin usuario válido
-
-#                 user_data = users_ref[0].to_dict()
-
-#                 # Listar todas las imágenes del usuario
-#                 for img in os.listdir(user_folder):
-#                     if os.path.isfile(os.path.join(user_folder, img)):
-#                         all_images.append({
-#                             "username": user_data['username'],
-#                             "nombre": user_data['nombre'],
-#                             "apellido": user_data['apellido'],
-#                             "imageUrl": f"/static/uploads/{username_folder}/{img}",
-#                             "description": f"Publicación de {user_data['nombre']} {user_data['apellido']}"
-#                         })
-
-#         # Ordenar imágenes (opcional)
-#         all_images = sorted(all_images, key=lambda x: x['imageUrl'])
-
-#         return jsonify({"success": True, "posts": all_images}), 200
-
-#     except Exception as e:
-#         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/feed', methods=['GET'])
 def get_feed():
@@ -256,6 +260,78 @@ def get_feed():
         all_images.sort(key=lambda x: x['timestamp'], reverse=True)
 
         return jsonify({"success": True, "posts": all_images}), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/like-post', methods=['POST'])
+def like_post():
+    try:
+        data = request.get_json()
+        username = data['username']
+        image_url = data['imageUrl']
+
+        print(f"Received data: username={username}, imageUrl={image_url}")
+
+        # Extraer el nombre del archivo de la URL
+        image_filename = image_url.split('/')[-1]
+        print(f"Extracted image filename: {image_filename}")
+
+        # Buscar la publicación en Firestore
+        post_ref = db.collection('posts').where('imageUrl', '==', image_filename).get()
+
+        if not post_ref:
+            return jsonify({
+                "success": False,
+                "message": "Publicación no encontrada",
+                "imageUrl": image_url,
+                "filename_searched": image_filename,
+                "posts_available": [post.to_dict() for post in db.collection('posts').get()]
+            }), 404
+
+        post_id = post_ref[0].id
+        post_data = post_ref[0].to_dict()
+
+        # Actualizar likes
+        likes = post_data.get('likes', [])
+        if username in likes:
+            likes.remove(username)  # Si ya dio like, lo quitamos
+        else:
+            likes.append(username)  # Si no, lo agregamos
+
+        # Guardar los likes actualizados en Firestore
+        db.collection('posts').document(post_id).update({'likes': likes})
+
+        # Enviar los likes actualizados de vuelta al cliente
+        return jsonify({"success": True, "likes": likes}), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/comment-post', methods=['POST'])
+def comment_post():
+    try:
+        data = request.get_json()
+        username = data['username']
+        image_url = data['imageUrl']
+        comment = data['comment']
+
+        # Obtener la publicación correspondiente
+        post_ref = db.collection('posts').where('imageUrl', '==', image_url).get()
+        if not post_ref:
+            return jsonify({"success": False, "message": "Publicación no encontrada"}), 404
+
+        post_id = post_ref[0].id
+        post_data = post_ref[0].to_dict()
+
+        # Agregar el comentario
+        comments = post_data.get('comments', [])
+        comments.append({'username': username, 'comment': comment, 'timestamp': time.time()})
+
+        db.collection('posts').document(post_id).update({'comments': comments})
+
+        return jsonify({"success": True, "comments": comments}), 200
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
