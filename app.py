@@ -268,45 +268,39 @@ def get_feed():
 def like_post():
     try:
         data = request.get_json()
-        username = data['username']
+        if not data or 'imageUrl' not in data:
+            return jsonify({"success": False, "message": "Faltan datos en la solicitud"}), 400
+
         image_url = data['imageUrl']
-
-        print(f"Received data: username={username}, imageUrl={image_url}")
-
-        # Extraer el nombre del archivo de la URL
         image_filename = image_url.split('/')[-1]
-        print(f"Extracted image filename: {image_filename}")
 
         # Buscar la publicación en Firestore
         post_ref = db.collection('posts').where('imageUrl', '==', image_filename).get()
-
         if not post_ref:
-            return jsonify({
-                "success": False,
-                "message": "Publicación no encontrada",
-                "imageUrl": image_url,
-                "filename_searched": image_filename,
-                "posts_available": [post.to_dict() for post in db.collection('posts').get()]
-            }), 404
+            return jsonify({"success": False, "message": "Publicación no encontrada"}), 404
 
         post_id = post_ref[0].id
         post_data = post_ref[0].to_dict()
 
-        # Actualizar likes
-        likes = post_data.get('likes', [])
-        if username in likes:
-            likes.remove(username)  # Si ya dio like, lo quitamos
-        else:
-            likes.append(username)  # Si no, lo agregamos
+        # Validar y corregir el campo `likes` si es necesario
+        likes_count = post_data.get('likes', 0)
+        if isinstance(likes_count, list):
+            likes_count = len(likes_count)  # Convertir listas erróneas en su longitud
+        elif not isinstance(likes_count, int):
+            likes_count = 0  # Resetear a 0 si el tipo es inválido
 
-        # Guardar los likes actualizados en Firestore
-        db.collection('posts').document(post_id).update({'likes': likes})
+        # Incrementar el contador de likes
+        likes_count += 1
 
-        # Enviar los likes actualizados de vuelta al cliente
-        return jsonify({"success": True, "likes": likes}), 200
+        # Actualizar Firestore con el valor corregido
+        db.collection('posts').document(post_id).update({'likes': likes_count})
+
+        return jsonify({"success": True, "likes": likes_count}), 200
 
     except Exception as e:
+        print(f"Error en el servidor: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 
 @app.route('/comment-post', methods=['POST'])
