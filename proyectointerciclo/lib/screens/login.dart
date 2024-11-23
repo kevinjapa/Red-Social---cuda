@@ -22,8 +22,6 @@ Future<String> getServerIp() async {
     final String username = _usernameController.text;
     final String password = _passwordController.text;
 
-    // final String url = 'http://192.168.0.104:5001/login';
-
     try {
       final serverIp = await getServerIp();
       final response = await http.post(
@@ -40,22 +38,6 @@ Future<String> getServerIp() async {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
-        // if (responseData['success'] == true) {
-        //   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        //     content: Text('Bienvenido $username'),
-        //     duration: Duration(seconds: 2),
-        //     backgroundColor: Color.fromARGB(255, 150, 185, 246),
-        //   ));
-        //   await Future.delayed(Duration(seconds: 0));
-        //   Navigator.pushReplacement(
-        //     context,
-        //     MaterialPageRoute(
-        //       builder: (context) => Home(username: username), // Pasa el username
-        //     ),
-        //   );
-        // } else {
-        //   _showError('Credenciales incorrectas');
-        // }
 
         if (responseData['success'] == true) {
           final prefs = await SharedPreferences.getInstance();
@@ -68,9 +50,6 @@ Future<String> getServerIp() async {
             ),
           );
         }
-
-
-
       } else {
         _showError('Error en el servidor');
       }

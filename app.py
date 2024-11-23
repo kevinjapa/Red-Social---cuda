@@ -17,7 +17,7 @@ import random
 app = Flask(__name__)
 CORS(app)
 # Inicializar Firebase
-cred = credentials.Certificate("/Users/kevinjapa/Desktop/Materia/Computacion Paralela/proyectoInterciclo/app-social-media-552ea-firebase-adminsdk-jc51c-746b9b24f5.json")  # Asegúrate de colocar tu archivo de clave JSON aquí
+cred = credentials.Certificate("/Users/kevinjapa/Desktop/Materia/Computacion Paralela/proyectoInterciclo/app-social-media-552ea-firebase-adminsdk-jc51c-746b9b24f5.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
@@ -26,7 +26,7 @@ db = firestore.client()
 def register():
     data = request.get_json()
     username = data['username']
-    password = generate_password_hash(data['password'], method='pbkdf2:sha256')  # Cifrado de contraseña
+    password = generate_password_hash(data['password'], method='pbkdf2:sha256')  
     nombre = data['nombre']
     apellido = data['apellido']
     try:
@@ -153,7 +153,6 @@ def upload_image():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-
 @app.route('/user-images/<username>', methods=['GET'])
 def get_user_images(username):
     try:
@@ -174,65 +173,6 @@ def get_user_images(username):
 @app.route('/static/uploads/<path:filename>')
 def serve_image(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
-# @app.route('/feed', methods=['GET'])
-# def get_feed():
-#     try:
-#         # Ruta base de uploads
-#         uploads_path = app.config['UPLOAD_FOLDER']
-#         if not os.path.exists(uploads_path):
-#             return jsonify({"success": False, "message": "No se encontró el directorio de uploads"}), 404
-
-#         # Recolectar imágenes de todos los usuarios
-#         all_images = []
-
-#         # Buscar carpetas de usuarios en 'static/uploads'
-#         for username_folder in os.listdir(uploads_path):
-#             user_folder = os.path.join(uploads_path, username_folder)
-#             if os.path.isdir(user_folder):
-#                 # Buscar información del usuario en Firestore
-#                 users_ref = db.collection('users').where('username', '==', username_folder).get()
-#                 if not users_ref:
-#                     continue  # Ignorar carpetas sin usuario válido
-
-#                 user_data = users_ref[0].to_dict()
-
-#                 # Listar todas las imágenes del usuario
-#                 user_images = []
-#                 for img in os.listdir(user_folder):
-#                     img_path = os.path.join(user_folder, img)
-#                     if os.path.isfile(img_path):
-#                         # Obtener la fecha de modificación de la imagen
-#                         creation_time = os.path.getmtime(img_path)
-#                         user_images.append({
-#                             "username": user_data['username'],
-#                             "nombre": user_data['nombre'],
-#                             "apellido": user_data['apellido'],
-#                             "imageUrl": f"/static/uploads/{username_folder}/{img}",
-#                             "description": f"Publicación de {user_data['nombre']} {user_data['apellido']}",
-#                             "timestamp": creation_time  # Timestamp para ordenarlas después
-#                         })
-
-#                 # Ordenar imágenes del usuario por fecha (más recientes primero)
-#                 user_images.sort(key=lambda x: x['timestamp'], reverse=True)
-
-#                 # Agregar la última publicación al inicio
-#                 if user_images:
-#                     all_images.append(user_images[0])  # Agregar la última publicación primero
-
-#                 # Mezclar aleatoriamente el resto de las imágenes y agregarlas
-#                 if len(user_images) > 1:
-#                     remaining_images = user_images[1:]
-#                     random.shuffle(remaining_images)
-#                     all_images.extend(remaining_images)
-
-#         # Ordenar la lista final por fecha (las más recientes primero)
-#         all_images.sort(key=lambda x: x['timestamp'], reverse=True)
-
-#         return jsonify({"success": True, "posts": all_images}), 200
-
-#     except Exception as e:
-#         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/feed', methods=['GET'])
 def get_feed():
@@ -269,27 +209,31 @@ def get_feed():
                         if post_ref:
                             post_data = post_ref[0].to_dict()
                             likes = post_data.get('likes', [])
+                            comments = post_data.get('comments', [])
                         else:
                             likes = []  # Si no hay likes registrados, asignar lista vacía
+                            comments = []
 
                         user_images.append({
+
+                            
                             "username": user_data['username'],
+                            # "username": f"{user_data['nombre']} {user_data['apellido']}",
                             "nombre": user_data['nombre'],
                             "apellido": user_data['apellido'],
                             "imageUrl": f"/static/uploads/{username_folder}/{img}",
                             "description": f"Publicación de {user_data['nombre']} {user_data['apellido']}",
+                            # "description": f"Publicación de {user_data['username']}",
                             "timestamp": creation_time,  # Timestamp para ordenarlas después
-                            "likes": likes  # Incluir los likes en la respuesta
+                            "likes": likes,  # Incluir los likes en la respuesta
+                            "comments": comments
                         })
 
-                # Ordenar imágenes del usuario por fecha (más recientes primero)
                 user_images.sort(key=lambda x: x['timestamp'], reverse=True)
 
-                # Agregar la última publicación al inicio
                 if user_images:
                     all_images.append(user_images[0])  # Agregar la última publicación primero
 
-                # Mezclar aleatoriamente el resto de las imágenes y agregarlas
                 if len(user_images) > 1:
                     remaining_images = user_images[1:]
                     random.shuffle(remaining_images)
@@ -356,17 +300,25 @@ def like_post():
         print(f"Error en el servidor: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-
 @app.route('/comment-post', methods=['POST'])
 def comment_post():
     try:
+        # Validar los datos de entrada
         data = request.get_json()
-        username = data['username']
-        image_url = data['imageUrl']
-        comment = data['comment']
+        if not data or 'username' not in data or 'imageUrl' not in data or 'comment' not in data:
+            return jsonify({"success": False, "message": "Faltan datos en la solicitud"}), 400
+
+        username = data['username'].strip()
+        image_url = data['imageUrl'].strip()
+        comment = data['comment'].strip()
+
+        image_filename = image_url.split("/")[-1]
+
+        if not username or not image_url or not comment:
+            return jsonify({"success": False, "message": "Datos incompletos o inválidos"}), 400
 
         # Obtener la publicación correspondiente
-        post_ref = db.collection('posts').where('imageUrl', '==', image_url).get()
+        post_ref = db.collection('posts').where('imageUrl', '==', image_filename).get()
         if not post_ref:
             return jsonify({"success": False, "message": "Publicación no encontrada"}), 404
 
@@ -375,8 +327,13 @@ def comment_post():
 
         # Agregar el comentario
         comments = post_data.get('comments', [])
-        comments.append({'username': username, 'comment': comment, 'timestamp': time.time()})
+        comments.append({
+            'username': username,
+            'comment': comment,
+            'timestamp': time.time()
+        })
 
+        # Actualizar Firestore con los nuevos comentarios
         db.collection('posts').document(post_id).update({'comments': comments})
 
         return jsonify({"success": True, "comments": comments}), 200
@@ -385,69 +342,72 @@ def comment_post():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-# drv.init()
-# device = drv.Device(0)
-# context = device.make_context()
 
-# mod = SourceModule("""
-#     __global__ void applyConvolutionGPU(unsigned char* d_image, double* d_kernel, double* d_result, int width, int height, int kernel_size) {
-#         int x = blockIdx.x * blockDim.x + threadIdx.x;
-#         int y = blockIdx.y * blockDim.y + threadIdx.y;
-#         int half_kernel = kernel_size / 2;
+# Codigo para implementar lo de cuda 
 
-#         if (x < width && y < height) {
-#             if (x >= half_kernel && x < width - half_kernel && y >= half_kernel && y < height - half_kernel) {
-#                 double sum = 0.0;
-#                 for (int ky = -half_kernel; ky <= half_kernel; ++ky) {
-#                     for (int kx = -half_kernel; kx <= half_kernel; ++kx) {
-#                         int pixel_value = d_image[(y + ky) * width + (x + kx)];
-#                         sum += pixel_value * d_kernel[(ky + half_kernel) * kernel_size + (kx + half_kernel)];
-#                     }
-#                 }
-#                 d_result[y * width + x] = sum;
-#             } else {
-#                 d_result[y * width + x] = 0;
-#             }
-#         }
-#     }
-# """)
+# # drv.init()
+# # device = drv.Device(0)
+# # context = device.make_context()
 
-def create_emboss_kernel(kernel_size):
-    kernel = np.zeros(kernel_size * kernel_size, dtype=np.float64)
-    half_size = kernel_size // 2
-    for y in range(kernel_size):
-        for x in range(kernel_size):
-            if x < half_size and y < half_size:
-                kernel[y * kernel_size + x] = -1
-            elif x > half_size and y > half_size:
-                kernel[y * kernel_size + x] = 1
-            elif x == half_size and y == half_size:
-                kernel[y * kernel_size + x] = 1
-    return kernel
+# # mod = SourceModule("""
+# #     __global__ void applyConvolutionGPU(unsigned char* d_image, double* d_kernel, double* d_result, int width, int height, int kernel_size) {
+# #         int x = blockIdx.x * blockDim.x + threadIdx.x;
+# #         int y = blockIdx.y * blockDim.y + threadIdx.y;
+# #         int half_kernel = kernel_size / 2;
 
-def create_gabor_kernel(kernel_size, sigma, theta, lambda_, gamma, psi):
-    kernel = np.zeros((kernel_size, kernel_size), dtype=np.float64)
-    half_size = kernel_size // 2
-    for y in range(-half_size, half_size + 1):
-        for x in range(-half_size, half_size + 1):
-            x_theta = x * np.cos(theta) + y * np.sin(theta)
-            y_theta = -x * np.sin(theta) + y * np.cos(theta)
-            gauss = np.exp(-(x_theta**2 + gamma**2 * y_theta**2) / (2 * sigma**2))
-            sinusoid = np.cos(2 * np.pi * x_theta / lambda_ + psi)
-            kernel[y + half_size, x + half_size] = gauss * sinusoid
-    return kernel.flatten()
+# #         if (x < width && y < height) {
+# #             if (x >= half_kernel && x < width - half_kernel && y >= half_kernel && y < height - half_kernel) {
+# #                 double sum = 0.0;
+# #                 for (int ky = -half_kernel; ky <= half_kernel; ++ky) {
+# #                     for (int kx = -half_kernel; kx <= half_kernel; ++kx) {
+# #                         int pixel_value = d_image[(y + ky) * width + (x + kx)];
+# #                         sum += pixel_value * d_kernel[(ky + half_kernel) * kernel_size + (kx + half_kernel)];
+# #                     }
+# #                 }
+# #                 d_result[y * width + x] = sum;
+# #             } else {
+# #                 d_result[y * width + x] = 0;
+# #             }
+# #         }
+# #     }
+# # """)
 
-def create_high_boost_kernel(kernel_size, A):
-    kernel = -np.ones(kernel_size * kernel_size, dtype=np.float64)
-    half_size = kernel_size // 2
-    kernel[half_size * kernel_size + half_size] = A + (kernel_size * kernel_size) - 1
-    return kernel
+# def create_emboss_kernel(kernel_size):
+#     kernel = np.zeros(kernel_size * kernel_size, dtype=np.float64)
+#     half_size = kernel_size // 2
+#     for y in range(kernel_size):
+#         for x in range(kernel_size):
+#             if x < half_size and y < half_size:
+#                 kernel[y * kernel_size + x] = -1
+#             elif x > half_size and y > half_size:
+#                 kernel[y * kernel_size + x] = 1
+#             elif x == half_size and y == half_size:
+#                 kernel[y * kernel_size + x] = 1
+#     return kernel
 
-def apply_filter(image, kernel, width, height, kernel_size, hilos):
-    dest = np.zeros_like(image, dtype=np.float64)
-    block_dim = int(np.sqrt(hilos))
-    block_size = (block_dim, block_dim, 1)
-    grid_size = (int(np.ceil(width / block_size[0])), int(np.ceil(height / block_size[1])), 1)
+# def create_gabor_kernel(kernel_size, sigma, theta, lambda_, gamma, psi):
+#     kernel = np.zeros((kernel_size, kernel_size), dtype=np.float64)
+#     half_size = kernel_size // 2
+#     for y in range(-half_size, half_size + 1):
+#         for x in range(-half_size, half_size + 1):
+#             x_theta = x * np.cos(theta) + y * np.sin(theta)
+#             y_theta = -x * np.sin(theta) + y * np.cos(theta)
+#             gauss = np.exp(-(x_theta**2 + gamma**2 * y_theta**2) / (2 * sigma**2))
+#             sinusoid = np.cos(2 * np.pi * x_theta / lambda_ + psi)
+#             kernel[y + half_size, x + half_size] = gauss * sinusoid
+#     return kernel.flatten()
+
+# def create_high_boost_kernel(kernel_size, A):
+#     kernel = -np.ones(kernel_size * kernel_size, dtype=np.float64)
+#     half_size = kernel_size // 2
+#     kernel[half_size * kernel_size + half_size] = A + (kernel_size * kernel_size) - 1
+#     return kernel
+
+# def apply_filter(image, kernel, width, height, kernel_size, hilos):
+#     dest = np.zeros_like(image, dtype=np.float64)
+#     block_dim = int(np.sqrt(hilos))
+#     block_size = (block_dim, block_dim, 1)
+#     grid_size = (int(np.ceil(width / block_size[0])), int(np.ceil(height / block_size[1])), 1)
 
     # context.push()
     # try:
@@ -471,65 +431,66 @@ def apply_filter(image, kernel, width, height, kernel_size, hilos):
     #     "gpu_time": gpu_time
     # }
 
-@app.route('/')
-def index():
-    return jsonify({"message": "Welcome to the image filter API!"})
 
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part in the request"})
+# @app.route('/')
+# def index():
+#     return jsonify({"message": "Welcome to the image filter API!"})
 
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No file selected for uploading"})
+# @app.route('/upload', methods=['POST'])
+# def upload_file():
+#     if 'file' not in request.files:
+#         return jsonify({"error": "No file part in the request"})
 
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-    file.save(filepath)
+#     file = request.files['file']
+#     if file.filename == '':
+#         return jsonify({"error": "No file selected for uploading"})
 
-    filter_type = request.form.get('filter_type')
-    kernel_size = int(request.form.get('kernel_size', 5))
-    hilos = int(request.form.get('hilos', 1024))
+#     filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+#     file.save(filepath)
 
-    gray_image, width, height = load_image(filepath)
+#     filter_type = request.form.get('filter_type')
+#     kernel_size = int(request.form.get('kernel_size', 5))
+#     hilos = int(request.form.get('hilos', 1024))
 
-    if filter_type == 'emboss':
-        kernel = create_emboss_kernel(kernel_size)
-    elif filter_type == 'gabor':
-        kernel = create_gabor_kernel(kernel_size, 4.0, 0, 10.0, 0.5, 0)
-    elif filter_type == 'high_boost':
-        kernel = create_high_boost_kernel(kernel_size, 10.0)
-    else:
-        return jsonify({"error": "Unsupported filter type"})
+#     gray_image, width, height = load_image(filepath)
 
-    result_data = apply_filter(gray_image, kernel, width, height, kernel_size, hilos)
+#     if filter_type == 'emboss':
+#         kernel = create_emboss_kernel(kernel_size)
+#     elif filter_type == 'gabor':
+#         kernel = create_gabor_kernel(kernel_size, 4.0, 0, 10.0, 0.5, 0)
+#     elif filter_type == 'high_boost':
+#         kernel = create_high_boost_kernel(kernel_size, 10.0)
+#     else:
+#         return jsonify({"error": "Unsupported filter type"})
 
-    processed_filepath = os.path.join(app.config['PROCESSED_FOLDER'], 'processed_' + file.filename)
-    save_image(result_data["filtered_image"], width, height, processed_filepath)
+#     result_data = apply_filter(gray_image, kernel, width, height, kernel_size, hilos)
 
-    return jsonify({
-        "original_image": filepath,
-        "processed_image": processed_filepath,
-        "gpu_time": result_data["gpu_time"]
-    })
+#     processed_filepath = os.path.join(app.config['PROCESSED_FOLDER'], 'processed_' + file.filename)
+#     save_image(result_data["filtered_image"], width, height, processed_filepath)
 
-@app.route('/download/<filename>', methods=['GET'])
-def download_file(filename):
-    filepath = os.path.join(app.config['PROCESSED_FOLDER'], filename)
-    if os.path.exists(filepath):
-        return send_file(filepath, as_attachment=True)
-    else:
-        return jsonify({"error": "File not found"}), 404
+#     return jsonify({
+#         "original_image": filepath,
+#         "processed_image": processed_filepath,
+#         "gpu_time": result_data["gpu_time"]
+#     })
 
-def load_image(filepath):
-    image = Image.open(filepath).convert('L')
-    gray_image = np.array(image, dtype=np.uint8)
-    width, height = image.size
-    return gray_image, width, height
+# @app.route('/download/<filename>', methods=['GET'])
+# def download_file(filename):
+#     filepath = os.path.join(app.config['PROCESSED_FOLDER'], filename)
+#     if os.path.exists(filepath):
+#         return send_file(filepath, as_attachment=True)
+#     else:
+#         return jsonify({"error": "File not found"}), 404
 
-def save_image(image, width, height, filepath):
-    result_image = Image.fromarray(image)
-    result_image.save(filepath)
+# def load_image(filepath):
+#     image = Image.open(filepath).convert('L')
+#     gray_image = np.array(image, dtype=np.uint8)
+#     width, height = image.size
+#     return gray_image, width, height
+
+# def save_image(image, width, height, filepath):
+#     result_image = Image.fromarray(image)
+#     result_image.save(filepath)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port="5001", debug=True)

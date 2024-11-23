@@ -57,17 +57,6 @@ class _SettingsState extends State<Settings> {
               ),
             ),
             SizedBox(height: 20),
-            // ElevatedButton(
-            //   onPressed: _logout,
-            //   style: ElevatedButton.styleFrom(
-            //     backgroundColor: Colors.red,
-            //     padding: EdgeInsets.symmetric(horizontal: 80, vertical: 15),
-            //   ),
-            //   child: Text(
-            //     'Cerrar sesión',
-            //     style: TextStyle(fontSize: 16, color: Colors.white),
-            //   ),
-            // ),
           ],
         ),
       ),

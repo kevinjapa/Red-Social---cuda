@@ -20,53 +20,27 @@ class _FiltroScreenState extends State<Filtro> {
   final prefs = await SharedPreferences.getInstance();
   return prefs.getString('server_ip') ?? 'default_ip_here';
   }
-//   Future<void> uploadImage(File image) async {
-//   final serverIp = await getServerIp();
-//   try {
-//     var request = http.MultipartRequest('POST', 
-//     Uri.parse('http://$serverIp:5001/upload-image'),);
 
-//     // Adjuntar archivo
-//     var file = await http.MultipartFile.fromPath(
-//       'file',
-//       image.path,
-//       contentType: MediaType('image', 'jpeg'),
-//     );
-//     request.files.add(file);
-//     var response = await request.send();
-//     if (response.statusCode == 200) {
-//       var responseData = await http.Response.fromStream(response);
-//       print('Upload successful: ${responseData.body}');
-//     } else {
-//       print('Error uploading image: ${response.reasonPhrase}');
-//     }
-//   } catch (e) {
-//     print('Error: $e');
-//   }
-// }
   Future<void> uploadImage(File image) async {
-  final serverIp = await getServerIp(); // Obtener la IP del servidor desde SharedPreferences
+  final serverIp = await getServerIp(); 
   final String url = 'http://$serverIp:5001/upload-image';
 
   try {
-    // Crear solicitud Multipart para enviar la imagen y el usuario
+
     var request = http.MultipartRequest('POST', Uri.parse(url));
 
-    // Adjuntar archivo de imagen
     var file = await http.MultipartFile.fromPath(
-      'file', // El campo debe coincidir con el nombre esperado en el backend
+      'file', 
       image.path,
       contentType: MediaType('image', 'jpeg'),
     );
     request.files.add(file);
 
-    // Agregar el nombre de usuario como parte de los datos del formulario
-    request.fields['username'] = widget.username; // Asegúrate de que 'widget.username' contiene el nombre de usuario
+    
+    request.fields['username'] = widget.username; 
 
-    // Enviar la solicitud
     var response = await request.send();
 
-    // Manejar la respuesta del servidor
     if (response.statusCode == 200) {
       var responseData = await http.Response.fromStream(response);
       print('Upload successful: ${responseData.body}');
@@ -86,7 +60,6 @@ class _FiltroScreenState extends State<Filtro> {
     );
   }
 }
-
 
   @override
   Widget build(BuildContext context) {
