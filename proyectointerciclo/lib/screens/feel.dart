@@ -213,8 +213,6 @@ Future<void> _addComment(String comment) async {
   }
 }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Card(
