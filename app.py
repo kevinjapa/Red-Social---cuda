@@ -106,38 +106,6 @@ app.config['PROCESSED_FOLDER'] = PROCESSED_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-# @app.route('/upload-image', methods=['POST'])
-# def upload_image():
-#     try:
-#         username = request.form.get('username')  # Asegúrate de que Flutter envía el nombre de usuario
-#         if not username:
-#             return jsonify({"success": False, "message": "Falta el nombre de usuario"}), 400
-
-#         if 'file' not in request.files:
-#             return jsonify({"success": False, "message": "No se encontró el archivo"}), 400
-
-#         file = request.files['file']
-
-#         if file.filename == '':
-#             return jsonify({"success": False, "message": "No se seleccionó un archivo"}), 400
-
-#         # Crear carpeta para el usuario si no existe
-#         user_folder = os.path.join(app.config['UPLOAD_FOLDER'], username)
-#         os.makedirs(user_folder, exist_ok=True)
-
-#         filename = secure_filename(file.filename)
-#         file_path = os.path.join(user_folder, filename)
-#         file.save(file_path)
-
-#         return jsonify({
-#             "success": True,
-#             "message": "Imagen subida con éxito",
-#             "file_path": file_path
-#         }), 200
-
-#     except Exception as e:
-#         return jsonify({"success": False, "error": str(e)}), 500
-
 @app.route('/upload-image', methods=['POST'])
 def upload_image():
     try:
@@ -158,12 +126,14 @@ def upload_image():
         os.makedirs(user_folder, exist_ok=True)
 
         # Generar un nombre único para la imagen
-        filename = f"{secure_filename(file.filename)}{int(time.time())}.jpg"
+        # filename = f"{secure_filename(file.filename)}{int(time.time())}.jpg"
+        filename = f"{secure_filename(file.filename).split('.')[0]}_{int(time.time())}.jpg"
         file_path = os.path.join(user_folder, filename)
         file.save(file_path)
 
         # Construir la URL de la imagen
         image_url = f"http://{request.host}/static/uploads/{username}/{filename}"
+        
 
         # Guardar en Firestore
         db.collection('posts').add({
@@ -205,6 +175,65 @@ def get_user_images(username):
 def serve_image(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+# @app.route('/feed', methods=['GET'])
+# def get_feed():
+#     try:
+#         # Ruta base de uploads
+#         uploads_path = app.config['UPLOAD_FOLDER']
+#         if not os.path.exists(uploads_path):
+#             return jsonify({"success": False, "message": "No se encontró el directorio de uploads"}), 404
+
+#         # Recolectar imágenes de todos los usuarios
+#         all_images = []
+
+#         # Buscar carpetas de usuarios en 'static/uploads'
+#         for username_folder in os.listdir(uploads_path):
+#             user_folder = os.path.join(uploads_path, username_folder)
+#             if os.path.isdir(user_folder):
+#                 # Buscar información del usuario en Firestore
+#                 users_ref = db.collection('users').where('username', '==', username_folder).get()
+#                 if not users_ref:
+#                     continue  # Ignorar carpetas sin usuario válido
+
+#                 user_data = users_ref[0].to_dict()
+
+#                 # Listar todas las imágenes del usuario
+#                 user_images = []
+#                 for img in os.listdir(user_folder):
+#                     img_path = os.path.join(user_folder, img)
+#                     if os.path.isfile(img_path):
+#                         # Obtener la fecha de modificación de la imagen
+#                         creation_time = os.path.getmtime(img_path)
+#                         user_images.append({
+#                             "username": user_data['username'],
+#                             "nombre": user_data['nombre'],
+#                             "apellido": user_data['apellido'],
+#                             "imageUrl": f"/static/uploads/{username_folder}/{img}",
+#                             "description": f"Publicación de {user_data['nombre']} {user_data['apellido']}",
+#                             "timestamp": creation_time  # Timestamp para ordenarlas después
+#                         })
+
+#                 # Ordenar imágenes del usuario por fecha (más recientes primero)
+#                 user_images.sort(key=lambda x: x['timestamp'], reverse=True)
+
+#                 # Agregar la última publicación al inicio
+#                 if user_images:
+#                     all_images.append(user_images[0])  # Agregar la última publicación primero
+
+#                 # Mezclar aleatoriamente el resto de las imágenes y agregarlas
+#                 if len(user_images) > 1:
+#                     remaining_images = user_images[1:]
+#                     random.shuffle(remaining_images)
+#                     all_images.extend(remaining_images)
+
+#         # Ordenar la lista final por fecha (las más recientes primero)
+#         all_images.sort(key=lambda x: x['timestamp'], reverse=True)
+
+#         return jsonify({"success": True, "posts": all_images}), 200
+
+#     except Exception as e:
+#         return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/feed', methods=['GET'])
 def get_feed():
     try:
@@ -234,13 +263,23 @@ def get_feed():
                     if os.path.isfile(img_path):
                         # Obtener la fecha de modificación de la imagen
                         creation_time = os.path.getmtime(img_path)
+
+                        # Buscar publicación correspondiente en Firestore
+                        post_ref = db.collection('posts').where('imageUrl', '==', img).get()
+                        if post_ref:
+                            post_data = post_ref[0].to_dict()
+                            likes = post_data.get('likes', [])
+                        else:
+                            likes = []  # Si no hay likes registrados, asignar lista vacía
+
                         user_images.append({
                             "username": user_data['username'],
                             "nombre": user_data['nombre'],
                             "apellido": user_data['apellido'],
                             "imageUrl": f"/static/uploads/{username_folder}/{img}",
                             "description": f"Publicación de {user_data['nombre']} {user_data['apellido']}",
-                            "timestamp": creation_time  # Timestamp para ordenarlas después
+                            "timestamp": creation_time,  # Timestamp para ordenarlas después
+                            "likes": likes  # Incluir los likes en la respuesta
                         })
 
                 # Ordenar imágenes del usuario por fecha (más recientes primero)
@@ -267,40 +306,55 @@ def get_feed():
 @app.route('/like-post', methods=['POST'])
 def like_post():
     try:
+        # Obtener los datos de la solicitud
         data = request.get_json()
-        if not data or 'imageUrl' not in data:
-            return jsonify({"success": False, "message": "Faltan datos en la solicitud"}), 400
+        image_url = data.get('imageUrl')
+        username = data.get('username')
 
-        image_url = data['imageUrl']
-        image_filename = image_url.split('/')[-1]
+        if not image_url or not username:
+            return jsonify({"success": False, "message": "Datos incompletos"}), 400
+
+        # Extraer el nombre del archivo base del imageUrl
+        image_filename = os.path.basename(image_url)
+        print(f"Procesando like para imageFilename: {image_filename} por usuario: {username}")
 
         # Buscar la publicación en Firestore
         post_ref = db.collection('posts').where('imageUrl', '==', image_filename).get()
+
         if not post_ref:
+            print("No se encontró la publicación con el imageUrl proporcionado.")
             return jsonify({"success": False, "message": "Publicación no encontrada"}), 404
 
         post_id = post_ref[0].id
         post_data = post_ref[0].to_dict()
 
-        # Validar y corregir el campo `likes` si es necesario
-        likes_count = post_data.get('likes', 0)
-        if isinstance(likes_count, list):
-            likes_count = len(likes_count)  # Convertir listas erróneas en su longitud
-        elif not isinstance(likes_count, int):
-            likes_count = 0  # Resetear a 0 si el tipo es inválido
+        # Verificar o inicializar el campo likes como lista
+        likes = post_data.get('likes', [])
+        print(f"Estado actual de likes antes de actualizar: {likes}")
 
-        # Incrementar el contador de likes
-        likes_count += 1
+        if not isinstance(likes, list):
+            likes = []  # Inicializar como lista vacía si no lo es
 
-        # Actualizar Firestore con el valor corregido
-        db.collection('posts').document(post_id).update({'likes': likes_count})
+        # Verificar si el usuario ya dio like
+        if username in likes:
+            print(f"El usuario {username} ya dio like.")
+        else:
+            likes.append(username)  # Agregar el usuario a la lista de likes
+            print(f"Agregando usuario {username} a likes.")
 
-        return jsonify({"success": True, "likes": likes_count}), 200
+            # Actualizar el campo likes en Firestore
+            try:
+                db.collection('posts').document(post_id).update({'likes': likes})
+                print(f"Likes actualizados en Firestore: {likes}")
+            except Exception as e:
+                print(f"Error al actualizar Firestore: {e}")
+                return jsonify({"success": False, "message": "Error al actualizar Firestore"}), 500
 
+        # Devolver la lista completa de likes
+        return jsonify({"success": True, "likes": likes}), 200
     except Exception as e:
         print(f"Error en el servidor: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 
 @app.route('/comment-post', methods=['POST'])
