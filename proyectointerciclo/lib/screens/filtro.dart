@@ -1,9 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:path/path.dart'; 
-import 'package:http_parser/http_parser.dart'; 
-import 'package:mime/mime.dart'; 
+import 'package:path/path.dart' as path; // Prefijo para evitar conflictos
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 class Filtro extends StatefulWidget {
   final File image;
@@ -15,51 +15,107 @@ class Filtro extends StatefulWidget {
   _FiltroScreenState createState() => _FiltroScreenState();
 }
 class _FiltroScreenState extends State<Filtro> {
+  final GlobalKey<ScaffoldMessengerState> _scaffoldKey = GlobalKey<ScaffoldMessengerState>(); // GlobalKey para el ScaffoldMessenger
   String _selectedFilter = 'Original';
+  Uint8List? _processedImageBytes;
+
   Future<String> getServerIp() async {
   final prefs = await SharedPreferences.getInstance();
   return prefs.getString('server_ip') ?? 'default_ip_here';
   }
 
-  Future<void> uploadImage(File image) async {
-  final serverIp = await getServerIp(); 
-  final String url = 'http://$serverIp:5001/upload-image';
+  // Aplica filtro a la imagen seleccionada
+  Future<void> applyFilter() async {
 
-  try {
-
-    var request = http.MultipartRequest('POST', Uri.parse(url));
-
-    var file = await http.MultipartFile.fromPath(
-      'file', 
-      image.path,
-      contentType: MediaType('image', 'jpeg'),
-    );
-    request.files.add(file);
-
-    
-    request.fields['username'] = widget.username; 
-
-    var response = await request.send();
-
-    if (response.statusCode == 200) {
-      var responseData = await http.Response.fromStream(response);
-      print('Upload successful: ${responseData.body}');
-      ScaffoldMessenger.of(context as BuildContext).showSnackBar(
-        SnackBar(content: Text('Imagen subida con éxito')),
+    if (_selectedFilter == 'Original') {
+      // Mostrar la imagen original sin enviar ninguna solicitud al servidor
+      setState(() {
+        _processedImageBytes = null; // Asegurarse de que se muestre la imagen original
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Mostrando imagen original')),
       );
-    } else {
-      print('Error uploading image: ${response.reasonPhrase}');
-      ScaffoldMessenger.of(context as BuildContext).showSnackBar(
-        SnackBar(content: Text('Error al subir la imagen')),
+      return; // Detener la ejecución del método
+    }
+
+    final serverIp = await getServerIp();
+    final String filterUrl = 'http://$serverIp:5001/apply-filter';
+
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse(filterUrl));
+      var file = await http.MultipartFile.fromPath(
+        'file',
+        widget.image.path,
+        contentType: MediaType('image', 'jpeg'),
+      );
+      request.files.add(file);
+      request.fields['filter'] = _selectedFilter; // Filtro seleccionado
+      request.fields['kernel_size'] = '21'; // Tamaño del kernel predeterminado
+
+      var response = await request.send();
+      if (response.statusCode == 200) {
+        var responseData = await http.Response.fromStream(response);
+        setState(() {
+          _processedImageBytes = responseData.bodyBytes; // Guarda la imagen procesada
+        });
+        _scaffoldKey.currentState?.showSnackBar(
+          SnackBar(content: Text('Filtro aplicado con éxito')),
+        );
+      } else {
+        throw Exception('Error aplicando filtro: ${response.reasonPhrase}');
+      }
+    } catch (e) {
+      print('Error: $e');
+      _scaffoldKey.currentState?.showSnackBar(
+        SnackBar(content: Text('Error: $e')),
       );
     }
-  } catch (e) {
-    print('Error: $e');
-    ScaffoldMessenger.of(context as BuildContext).showSnackBar(
-      SnackBar(content: Text('Error al conectar con el servidor')),
-    );
   }
-}
+
+  Future<void> uploadImage() async {
+    final serverIp = await getServerIp();
+    final String url = 'http://$serverIp:5001/upload-image';
+
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse(url));
+
+      if (_processedImageBytes != null) {
+        // Sube la imagen procesada si existe
+        var processedFile = http.MultipartFile.fromBytes(
+          'file',
+          _processedImageBytes!,
+          filename: '${path.basename(widget.image.path)}_processed.jpg',
+          contentType: MediaType('image', 'jpeg'),
+        );
+        request.files.add(processedFile);
+      } else {
+        // Sube la imagen original
+        var originalFile = await http.MultipartFile.fromPath(
+          'file',
+          widget.image.path,
+          contentType: MediaType('image', 'jpeg'),
+        );
+        request.files.add(originalFile);
+      }
+
+      request.fields['username'] = widget.username;
+
+      var response = await request.send();
+
+      if (response.statusCode == 200) {
+        _scaffoldKey.currentState?.showSnackBar(
+          SnackBar(content: Text('Imagen subida con éxito')),
+        );
+      } else {
+        throw Exception('Error subiendo imagen: ${response.reasonPhrase}');
+      }
+    } catch (e) {
+      print('Error: $e');
+      _scaffoldKey.currentState?.showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +125,7 @@ class _FiltroScreenState extends State<Filtro> {
         actions: [
           IconButton(
             icon: Icon(Icons.upload),
-            onPressed: () => uploadImage(widget.image),
+            onPressed: uploadImage,
           ),
         ],
       ),
@@ -84,7 +140,12 @@ class _FiltroScreenState extends State<Filtro> {
             ),
           ),
           Expanded(
-            child: Image.file(widget.image),
+            child: _processedImageBytes != null
+                ? Image.memory(
+              _processedImageBytes!,
+              fit: BoxFit.contain,
+            )
+                : Image.file(widget.image),
           ),
           Expanded(
             child: Container(
@@ -126,10 +187,8 @@ class _FiltroScreenState extends State<Filtro> {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
-              print('Aplicar filtro: $_selectedFilter');
-            },
-            child: Text('Publicar'),
+            onPressed: applyFilter,
+            child: Text('Aplicar Filtro'),
           ),
         ],
       ),

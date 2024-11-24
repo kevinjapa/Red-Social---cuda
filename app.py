@@ -1,10 +1,11 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 import firebase_admin
 from firebase_admin import credentials, firestore, storage, initialize_app
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
-# import pycuda.driver as drv
-# from pycuda.compiler import SourceModule
+import pycuda.driver as drv
+import pycuda.autoinit
+from pycuda.compiler import SourceModule
 from PIL import Image
 import io
 import time
@@ -18,12 +19,24 @@ import random
 app = Flask(__name__)
 CORS(app)
 # Inicializar Firebase
-cred = credentials.Certificate("/Users/kevinjapa/Desktop/Materia/Computacion Paralela/proyectoInterciclo/app-social-media-552ea-firebase-adminsdk-jc51c-746b9b24f5.json")
+cred = credentials.Certificate("app-social-media-552ea-firebase-adminsdk-jc51c-746b9b24f5.json")
 # firebase_admin.initialize_app(cred)
 initialize_app(cred, {
     'storageBucket': 'app-social-media-552ea.firebasestorage.app'
 })
 db = firestore.client()
+
+UPLOAD_FOLDER = 'static/uploads/'
+PROCESSED_FOLDER = 'static/processed/'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['PROCESSED_FOLDER'] = PROCESSED_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+
+# Inicializa PyCUDA
+drv.init()
+device = drv.Device(0)
+context = device.make_context()  # Contexto global para toda la aplicación
 
 # Ruta de registro
 @app.route('/register', methods=['POST'])
@@ -397,152 +410,120 @@ def get_profile_image(username):
 
 # Codigo para implementar lo de cuda 
 
-# # drv.init()
-# # device = drv.Device(0)
-# # context = device.make_context()
+# Kernel CUDA para convoluciones
+mod = SourceModule("""
+    __global__ void applyConvolutionGPU(unsigned char* d_image, double* d_kernel, double* d_result, int width, int height, int kernel_size) {
+        int x = blockIdx.x * blockDim.x + threadIdx.x;
+        int y = blockIdx.y * blockDim.y + threadIdx.y;
+        int half_kernel = kernel_size / 2;
 
-# # mod = SourceModule("""
-# #     __global__ void applyConvolutionGPU(unsigned char* d_image, double* d_kernel, double* d_result, int width, int height, int kernel_size) {
-# #         int x = blockIdx.x * blockDim.x + threadIdx.x;
-# #         int y = blockIdx.y * blockDim.y + threadIdx.y;
-# #         int half_kernel = kernel_size / 2;
+        if (x < width && y < height) {
+            if (x >= half_kernel && x < width - half_kernel && y >= half_kernel && y < height - half_kernel) {
+                double sum = 0.0;
+                for (int ky = -half_kernel; ky <= half_kernel; ++ky) {
+                    for (int kx = -half_kernel; kx <= half_kernel; ++kx) {
+                        int pixel_value = d_image[(y + ky) * width + (x + kx)];
+                        sum += pixel_value * d_kernel[(ky + half_kernel) * kernel_size + (kx + half_kernel)];
+                    }
+                }
+                d_result[y * width + x] = sum;
+            } else {
+                d_result[y * width + x] = 0;
+            }
+        }
+    }
+""")
 
-# #         if (x < width && y < height) {
-# #             if (x >= half_kernel && x < width - half_kernel && y >= half_kernel && y < height - half_kernel) {
-# #                 double sum = 0.0;
-# #                 for (int ky = -half_kernel; ky <= half_kernel; ++ky) {
-# #                     for (int kx = -half_kernel; kx <= half_kernel; ++kx) {
-# #                         int pixel_value = d_image[(y + ky) * width + (x + kx)];
-# #                         sum += pixel_value * d_kernel[(ky + half_kernel) * kernel_size + (kx + half_kernel)];
-# #                     }
-# #                 }
-# #                 d_result[y * width + x] = sum;
-# #             } else {
-# #                 d_result[y * width + x] = 0;
-# #             }
-# #         }
-# #     }
-# # """)
+applyConvolutionGPU = mod.get_function("applyConvolutionGPU")
 
-# def create_emboss_kernel(kernel_size):
-#     kernel = np.zeros(kernel_size * kernel_size, dtype=np.float64)
-#     half_size = kernel_size // 2
-#     for y in range(kernel_size):
-#         for x in range(kernel_size):
-#             if x < half_size and y < half_size:
-#                 kernel[y * kernel_size + x] = -1
-#             elif x > half_size and y > half_size:
-#                 kernel[y * kernel_size + x] = 1
-#             elif x == half_size and y == half_size:
-#                 kernel[y * kernel_size + x] = 1
-#     return kernel
+# Funciones para crear kernels
+def create_emboss_kernel(kernel_size):
+    kernel = np.zeros(kernel_size * kernel_size, dtype=np.float64)
+    half_size = kernel_size // 2
+    for y in range(kernel_size):
+        for x in range(kernel_size):
+            if x < half_size and y < half_size:
+                kernel[y * kernel_size + x] = -1
+            elif x > half_size and y > half_size:
+                kernel[y * kernel_size + x] = 1
+            elif x == half_size and y == half_size:
+                kernel[y * kernel_size + x] = 1
+    return kernel
 
-# def create_gabor_kernel(kernel_size, sigma, theta, lambda_, gamma, psi):
-#     kernel = np.zeros((kernel_size, kernel_size), dtype=np.float64)
-#     half_size = kernel_size // 2
-#     for y in range(-half_size, half_size + 1):
-#         for x in range(-half_size, half_size + 1):
-#             x_theta = x * np.cos(theta) + y * np.sin(theta)
-#             y_theta = -x * np.sin(theta) + y * np.cos(theta)
-#             gauss = np.exp(-(x_theta**2 + gamma**2 * y_theta**2) / (2 * sigma**2))
-#             sinusoid = np.cos(2 * np.pi * x_theta / lambda_ + psi)
-#             kernel[y + half_size, x + half_size] = gauss * sinusoid
-#     return kernel.flatten()
+def create_gabor_kernel(kernel_size, sigma, theta, lambda_, gamma, psi):
+    kernel = np.zeros((kernel_size, kernel_size), dtype=np.float64)
+    half_size = kernel_size // 2
+    for y in range(-half_size, half_size + 1):
+        for x in range(-half_size, half_size + 1):
+            x_theta = x * np.cos(theta) + y * np.sin(theta)
+            y_theta = -x * np.sin(theta) + y * np.cos(theta)
+            gauss = np.exp(-(x_theta**2 + gamma**2 * y_theta**2) / (2 * sigma**2))
+            sinusoid = np.cos(2 * np.pi * x_theta / lambda_ + psi)
+            kernel[y + half_size, x + half_size] = gauss * sinusoid
+    return kernel.flatten()
 
-# def create_high_boost_kernel(kernel_size, A):
-#     kernel = -np.ones(kernel_size * kernel_size, dtype=np.float64)
-#     half_size = kernel_size // 2
-#     kernel[half_size * kernel_size + half_size] = A + (kernel_size * kernel_size) - 1
-#     return kernel
+def create_high_boost_kernel(kernel_size, A):
+    kernel = -np.ones(kernel_size * kernel_size, dtype=np.float64)
+    half_size = kernel_size // 2
+    kernel[half_size * kernel_size + half_size] = A + (kernel_size * kernel_size) - 1
+    return kernel
 
-# def apply_filter(image, kernel, width, height, kernel_size, hilos):
-#     dest = np.zeros_like(image, dtype=np.float64)
-#     block_dim = int(np.sqrt(hilos))
-#     block_size = (block_dim, block_dim, 1)
-#     grid_size = (int(np.ceil(width / block_size[0])), int(np.ceil(height / block_size[1])), 1)
+# Función para aplicar filtro CUDA con validaciones y manejo de errores detallado
+def apply_filter(image, kernel, width, height, kernel_size):
+    dest = np.zeros_like(image, dtype=np.float64)
+    block_size = (16, 16, 1)
+    grid_size = (int(np.ceil(width / block_size[0])), int(np.ceil(height / block_size[1])), 1)
 
-    # context.push()
-    # try:
-    #     applyConvolutionGPU = mod.get_function("applyConvolutionGPU")
-    #     start_time = time.time()
-    #     applyConvolutionGPU(
-    #         drv.In(image), drv.In(kernel), drv.Out(dest),
-    #         np.int32(width), np.int32(height), np.int32(kernel_size),
-    #         block=block_size, grid=grid_size
-    #     )
-    #     context.synchronize()
-    #     gpu_time = time.time() - start_time
-    # finally:
-    #     context.pop()
+    context.push()
+    try:
+        applyConvolutionGPU(
+            drv.In(image), drv.In(kernel), drv.Out(dest),
+            np.int32(width), np.int32(height), np.int32(kernel_size),
+            block=block_size, grid=grid_size
+        )
+        context.synchronize()
+    finally:
+        context.pop()
 
-    # min_val, max_val = np.min(dest), np.max(dest)
-    # normalized_image = ((dest - min_val) / (max_val - min_val) * 255).astype(np.uint8)
-
-    # return {
-    #     "filtered_image": normalized_image,
-    #     "gpu_time": gpu_time
-    # }
+    min_val, max_val = np.min(dest), np.max(dest)
+    normalized_result = ((dest - min_val) / (max_val - min_val) * 255).astype(np.uint8)
+    return normalized_result
 
 
-# @app.route('/')
-# def index():
-#     return jsonify({"message": "Welcome to the image filter API!"})
 
-# @app.route('/upload', methods=['POST'])
-# def upload_file():
-#     if 'file' not in request.files:
-#         return jsonify({"error": "No file part in the request"})
+# Endpoint para aplicar filtros con validaciones adicionales
+@app.route('/apply-filter', methods=['POST'])
+def apply_filter_endpoint():
+    try:
+        file = request.files['file']
+        filter_type = request.form.get('filter')
+        kernel_size = int(request.form.get('kernel_size', 5))
 
-#     file = request.files['file']
-#     if file.filename == '':
-#         return jsonify({"error": "No file selected for uploading"})
+        if not file or not filter_type:
+            return jsonify({"error": "Missing file or filter type"}), 400
 
-#     filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-#     file.save(filepath)
+        image = np.array(Image.open(file).convert('L'))
+        height, width = image.shape
 
-#     filter_type = request.form.get('filter_type')
-#     kernel_size = int(request.form.get('kernel_size', 5))
-#     hilos = int(request.form.get('hilos', 1024))
+        if filter_type == 'Emboss':
+            kernel = create_emboss_kernel(kernel_size)
+        elif filter_type == 'Gabor':
+            kernel = create_gabor_kernel(kernel_size, 4.0, 0, 10.0, 0.5, 0)
+        elif filter_type == 'High Boost':
+            kernel = create_high_boost_kernel(kernel_size, 10.0)
+        else:
+            return jsonify({"error": "Unsupported filter type"}), 400
 
-#     gray_image, width, height = load_image(filepath)
+        result = apply_filter(image, kernel, width, height, kernel_size)
+        result_image = Image.fromarray(result)
 
-#     if filter_type == 'emboss':
-#         kernel = create_emboss_kernel(kernel_size)
-#     elif filter_type == 'gabor':
-#         kernel = create_gabor_kernel(kernel_size, 4.0, 0, 10.0, 0.5, 0)
-#     elif filter_type == 'high_boost':
-#         kernel = create_high_boost_kernel(kernel_size, 10.0)
-#     else:
-#         return jsonify({"error": "Unsupported filter type"})
+        byte_io = io.BytesIO()
+        result_image.save(byte_io, 'JPEG')
+        byte_io.seek(0)
+        return send_file(byte_io, mimetype='image/jpeg')
 
-#     result_data = apply_filter(gray_image, kernel, width, height, kernel_size, hilos)
-
-#     processed_filepath = os.path.join(app.config['PROCESSED_FOLDER'], 'processed_' + file.filename)
-#     save_image(result_data["filtered_image"], width, height, processed_filepath)
-
-#     return jsonify({
-#         "original_image": filepath,
-#         "processed_image": processed_filepath,
-#         "gpu_time": result_data["gpu_time"]
-#     })
-
-# @app.route('/download/<filename>', methods=['GET'])
-# def download_file(filename):
-#     filepath = os.path.join(app.config['PROCESSED_FOLDER'], filename)
-#     if os.path.exists(filepath):
-#         return send_file(filepath, as_attachment=True)
-#     else:
-#         return jsonify({"error": "File not found"}), 404
-
-# def load_image(filepath):
-#     image = Image.open(filepath).convert('L')
-#     gray_image = np.array(image, dtype=np.uint8)
-#     width, height = image.size
-#     return gray_image, width, height
-
-# def save_image(image, width, height, filepath):
-#     result_image = Image.fromarray(image)
-#     result_image.save(filepath)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port="5001", debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)
