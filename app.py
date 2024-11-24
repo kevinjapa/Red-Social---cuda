@@ -345,8 +345,6 @@ def comment_post():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-
-
 @app.route('/upload-profile-image', methods=['POST'])
 def upload_profile_image():
     try:
@@ -380,8 +378,6 @@ def upload_profile_image():
     except Exception as e:
         print(f"Error desconocido: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
-
-
 
 @app.route('/profile-image/<username>', methods=['GET'])
 def get_profile_image(username):
