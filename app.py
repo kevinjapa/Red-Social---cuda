@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 import firebase_admin
-from firebase_admin import credentials, firestore, storage
+from firebase_admin import credentials, firestore, storage, initialize_app
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 # import pycuda.driver as drv
@@ -14,11 +14,15 @@ from flask import send_from_directory
 from flask_cors import CORS
 import random
 
+
 app = Flask(__name__)
 CORS(app)
 # Inicializar Firebase
 cred = credentials.Certificate("/Users/kevinjapa/Desktop/Materia/Computacion Paralela/proyectoInterciclo/app-social-media-552ea-firebase-adminsdk-jc51c-746b9b24f5.json")
-firebase_admin.initialize_app(cred)
+# firebase_admin.initialize_app(cred)
+initialize_app(cred, {
+    'storageBucket': 'app-social-media-552ea.firebasestorage.app'
+})
 db = firestore.client()
 
 # Ruta de registro
@@ -338,6 +342,58 @@ def comment_post():
 
         return jsonify({"success": True, "comments": comments}), 200
 
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+
+@app.route('/upload-profile-image', methods=['POST'])
+def upload_profile_image():
+    try:
+        username = request.form.get('username')
+        file = request.files['file']
+
+        if not username or not file:
+            return jsonify({"success": False, "message": "Faltan datos"}), 400
+
+        # Nombre único para la imagen
+        filename = f"profile_{username}.jpg"
+
+        # Accede al bucket configurado
+        bucket = storage.bucket()
+        blob = bucket.blob(f"profile_pictures/{filename}")
+        blob.upload_from_file(file, content_type=file.content_type)
+
+        # Obtener URL pública
+        blob.make_public()
+        image_url = blob.public_url
+
+        # Actualizar Firestore con la nueva URL
+        users_ref = db.collection('users').where('username', '==', username).get()
+        if not users_ref:
+            return jsonify({"success": False, "message": "Usuario no encontrado"}), 404
+
+        user_id = users_ref[0].id
+        db.collection('users').document(user_id).update({"profileImage": image_url})
+
+        return jsonify({"success": True, "imageUrl": image_url}), 200
+    except Exception as e:
+        print(f"Error desconocido: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+
+@app.route('/profile-image/<username>', methods=['GET'])
+def get_profile_image(username):
+    try:
+        users_ref = db.collection('users').where('username', '==', username).get()
+        if not users_ref:
+            return jsonify({"success": False, "message": "Usuario no encontrado"}), 404
+
+        user_data = users_ref[0].to_dict()
+        image_url = user_data.get("profileImage", "")
+
+        return jsonify({"success": True, "imageUrl": image_url}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
