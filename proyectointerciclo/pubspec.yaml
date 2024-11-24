@@ -17,12 +17,25 @@ dependencies:
   image_picker: ^0.8.7+3
   flutter_localizations:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.1
+  pull_to_refresh_flutter3: ^2.0.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   flutter_lints: ^4.0.0
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/icon.png"
+
+# flutter_icons:
+#   android: "launcher_icon"
+#   ios: true
+#   image_path: "assets/images/icon.png"
+  # adaptive_icon_background: "direccion de tu imagen"
 
 flutter:
   uses-material-design: true
@@ -33,3 +46,4 @@ flutter:
   assets:
     # Add assets from the images directory to the application.
     - assets/images/
+
