@@ -64,9 +64,36 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Instagram'),
+        title: ShaderMask(
+          shaderCallback: (Rect bounds) {
+            return const LinearGradient(
+              colors: [
+                Color(0xFFfeda75), 
+                Color(0xFFfa7e1e), 
+                Color(0xFFd62976), 
+                Color(0xFF962fbf),
+                Color(0xFF4f5bd5),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ).createShader(bounds);
+          },
+          child: Text(
+            'Zonify',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ),
-      body: _pages[_selectedIndex],
+
+      body: Padding(
+        padding: EdgeInsets.zero,
+        child: _pages[_selectedIndex],
+      ),
+
       floatingActionButton: FloatingActionButton(
         onPressed: _openCamera,
         child: Icon(Icons.camera_alt),

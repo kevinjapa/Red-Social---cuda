@@ -45,9 +45,7 @@ class _FeedState extends State<Feed> {
         setState(() {
           _posts = List<Map<String, dynamic>>.from(data['posts']);
         });
-      } else {
-        print('Error fetching posts: ${response.reasonPhrase}');
-      }
+      } 
     } catch (e) {
       print('Error: $e');
     }
@@ -55,60 +53,29 @@ class _FeedState extends State<Feed> {
 
   @override
   Widget build(BuildContext context) {
-    if (_username.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Inicio'),
-          centerTitle: true,
-        ),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return FutureBuilder<String>(
       future: getServerIp(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            appBar: AppBar(
-              // title: Text('Inicio'),
-              centerTitle: true,
-            ),
-            body: Center(child: CircularProgressIndicator()),
-          );
-        } else if (snapshot.hasError) {
-          return Scaffold(
-            appBar: AppBar(
-              title: Text('Inicio'),
-              centerTitle: true,
-            ),
-            body: Center(child: Text('Error: ${snapshot.error}')),
-          );
-        } else {
-          final String serverIp = snapshot.data ?? 'default_ip_here';
-          return Scaffold(
-            appBar: AppBar(
-              // title: Text('Inicio'),
-              centerTitle: true,
-            ),
-            body: _posts.isEmpty
-                ? Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    itemCount: _posts.length,
-                    itemBuilder: (context, index) {
-                      final post = _posts[index];
-                      return PostCard(
-                        username: _username,
-                        imageUrl: 'http://$serverIp:5001${post['imageUrl']}',
-                        description: post['description'],
-                        likes: post['likes'] ?? [],
-                        comments: post['comments'] ?? [],
-                      );
-                    },
-                  ),
-          );
-        }
-      },
+        final String serverIp = snapshot.data ?? 'default_ip_here';
+        return Scaffold(
+          body: _posts.isEmpty
+              ? Center(child: CircularProgressIndicator())
+              : ListView.builder(
+                  padding: EdgeInsets.zero, 
+                  itemCount: _posts.length,
+                  itemBuilder: (context, index) {
+                    final post = _posts[index];
+                    return PostCard(
+                      username: _username,
+                      imageUrl: 'http://$serverIp:5001${post['imageUrl']}',
+                      description: post['description'],
+                      likes: post['likes'] ?? [],
+                      comments: post['comments'] ?? [],
+                    );
+                  },
+                ),
+        );
+      }
     );
   }
 }
@@ -151,7 +118,6 @@ class _PostCardState extends State<PostCard> {
     final url = 'http://$serverIp:5001/like-post';
 
     try {
-      // print('Enviando datos: username=${widget.username}, imageUrl=${widget.imageUrl}');
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
@@ -166,8 +132,6 @@ class _PostCardState extends State<PostCard> {
         setState(() {
           likes = List<dynamic>.from(data['likes'] ?? []);
         });
-      } else {
-        // print('Error al enviar like: ${response.statusCode}, ${response.body}');
       }
     } catch (e) {
       print('Error en el cliente Flutter: $e');
@@ -176,7 +140,6 @@ class _PostCardState extends State<PostCard> {
 
 Future<void> _addComment(String comment) async {
   if (comment.trim().isEmpty) {
-    print("Comentario vacío. No se puede agregar.");
     return;
   }
 
@@ -185,9 +148,6 @@ Future<void> _addComment(String comment) async {
   final url = 'http://$serverIp:5001/comment-post';
 
   try {
-    print("URL de solicitud: $url");
-    print("Datos enviados: username=${widget.username}, imageUrl=${widget.imageUrl}, comment=$comment");
-
     final response = await http.post(
       Uri.parse(url),
       headers: {'Content-Type': 'application/json'},
@@ -197,16 +157,11 @@ Future<void> _addComment(String comment) async {
         'comment': comment.trim(),
       }),
     );
-
-    print("Código de respuesta: ${response.statusCode}");
     if (response.statusCode == 200) {
       final responseData = json.decode(response.body);
       setState(() {
         comments = List<Map<String, dynamic>>.from(responseData['comments']);
       });
-      print('Comentario agregado correctamente.');
-    } else {
-      print('Error al agregar comentario: ${response.statusCode}, ${response.body}');
     }
   } catch (e) {
     print('Error al agregar comentario: $e');
@@ -216,11 +171,8 @@ Future<void> _addComment(String comment) async {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-      ),
+      margin: EdgeInsets.zero,
+      elevation: 0, // Quita la sombra del Card    
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -251,7 +203,7 @@ Future<void> _addComment(String comment) async {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(8.0),
             child: Text(
               widget.description,
               style: TextStyle(fontSize: 16),
