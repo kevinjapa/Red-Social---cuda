@@ -181,6 +181,20 @@ class _FiltroScreenState extends State<Filtro> {
                     child: FittedBox(
                       child: _filterButton('High Boost'),
                     ),
+                  ),
+                  SizedBox(
+                    width: 100,
+                    height: 100,
+                    child: FittedBox(
+                      child: _filterButton('Contrast Enhancement'),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 100,
+                    height: 100,
+                    child: FittedBox(
+                      child: _filterButton('Selective Tone'),
+                    ),
                   )
                 ],
               ),
@@ -194,6 +208,7 @@ class _FiltroScreenState extends State<Filtro> {
       ),
     );
   }
+
   Widget _filterButton(String filterName) {
     return GestureDetector(
       onTap: () {

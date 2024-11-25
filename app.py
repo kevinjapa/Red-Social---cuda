@@ -432,9 +432,31 @@ mod = SourceModule("""
             }
         }
     }
+                   
+    __global__ void applyLinearFilterGPU(unsigned char* d_image, double* d_result, int width, int height, int filter_type, double param1, double param2) {
+        int x = blockIdx.x * blockDim.x + threadIdx.x;
+        int y = blockIdx.y * blockDim.y + threadIdx.y;
+        int idx = y * width + x;
+
+        if (x < width && y < height) {
+            double pixel_value = d_image[idx];
+            if (filter_type == 1) {  // Filtro de Realce de Contraste
+                d_result[idx] = param1 * (pixel_value - 128.0) + param2 + 128.0;
+            } else if (filter_type == 2) {  // Tono Selectivo
+                if (fabs(pixel_value - param1) < param2) {
+                    d_result[idx] = 255.0;  // Resalta tonos similares al objetivo
+                } else {
+                    d_result[idx] = pixel_value * 0.5;  // Reduce tonos lejanos
+                }
+            } else {
+                d_result[idx] = pixel_value;  // Filtro de identidad como fallback
+            }
+        }
+    }
 """)
 
 applyConvolutionGPU = mod.get_function("applyConvolutionGPU")
+applyLinearFilterGPU = mod.get_function("applyLinearFilterGPU")
 
 # Funciones para crear kernels
 def create_emboss_kernel(kernel_size):
@@ -489,11 +511,30 @@ def apply_filter(image, kernel, width, height, kernel_size):
     normalized_result = ((dest - min_val) / (max_val - min_val) * 255).astype(np.uint8)
     return normalized_result
 
+# Función para aplicar un filtro lineal
+def apply_linear_filter(image, width, height, filter_type, param1, param2):
+    dest = np.zeros_like(image, dtype=np.float64)
+    block_size = (16, 16, 1)
+    grid_size = (int(np.ceil(width / block_size[0])), int(np.ceil(height / block_size[1])), 1)
 
+    context.push()
+    try:
+        applyLinearFilterGPU(
+            drv.In(image), drv.Out(dest),
+            np.int32(width), np.int32(height), np.int32(filter_type),
+            np.float64(param1), np.float64(param2),
+            block=block_size, grid=grid_size
+        )
+        context.synchronize()
+    finally:
+        context.pop()
+
+    return np.clip(dest, 0, 255).astype(np.uint8)
 
 # Endpoint para aplicar filtros con validaciones adicionales
 @app.route('/apply-filter', methods=['POST'])
 def apply_filter_endpoint():
+
     try:
         file = request.files['file']
         filter_type = request.form.get('filter')
@@ -511,10 +552,18 @@ def apply_filter_endpoint():
             kernel = create_gabor_kernel(kernel_size, 4.0, 0, 10.0, 0.5, 0)
         elif filter_type == 'High Boost':
             kernel = create_high_boost_kernel(kernel_size, 10.0)
+        
+        if filter_type == 'Contrast Enhancement':
+            alpha = request.form.get('alpha', 1.5)  # Factor de realce
+            beta = request.form.get('beta', 0.5)   # Factor de brillo
+            result = apply_linear_filter(image, width, height, filter_type=1, param1=float(alpha), param2=float(beta))
+        elif filter_type == 'Selective Tone':
+            target_tone = request.form.get('target_tone', 128)  # Tono objetivo
+            adjustment = request.form.get('adjustment', 50)    # Ajuste de brillo
+            result = apply_linear_filter(image, width, height, filter_type=2, param1=float(target_tone), param2=float(adjustment))
         else:
-            return jsonify({"error": "Unsupported filter type"}), 400
-
-        result = apply_filter(image, kernel, width, height, kernel_size)
+            result = apply_filter(image, kernel, width, height, kernel_size)
+        
         result_image = Image.fromarray(result)
 
         byte_io = io.BytesIO()
