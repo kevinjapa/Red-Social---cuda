@@ -380,16 +380,16 @@ class _FiltroScreenState extends State<Filtro> {
       // ),
       appBar: AppBar(
         title: Text('Nueva Publicación'),
-        actions: [
-          TextButton.icon(
-            icon: Icon(Icons.upload, color: const Color.fromARGB(255, 37, 37, 37)),
-            label: Text(
-              'Publicar',
-              style: TextStyle(color: const Color.fromARGB(255, 45, 45, 45)),
-            ),
-            onPressed: uploadImage,
-          ),
-        ],
+        // actions: [
+        //   TextButton.icon(
+        //     icon: Icon(Icons.upload, color: const Color.fromARGB(255, 37, 37, 37)),
+        //     label: Text(
+        //       'Publicar',
+        //       style: TextStyle(color: const Color.fromARGB(255, 45, 45, 45)),
+        //     ),
+        //     onPressed: uploadImage,
+        //   ),
+        // ],
       ),
 
       body: Column(
@@ -421,18 +421,18 @@ class _FiltroScreenState extends State<Filtro> {
               ),
             ),
           ),
-          // Padding(
-          //   padding: const EdgeInsets.symmetric(vertical: 8.0),
-          //   child: ElevatedButton.icon(
-          //     onPressed: applyFilter,
-          //     icon: Icon(Icons.filter),
-          //     label: Text('Aplicar Filtro'),
-          //     style: ElevatedButton.styleFrom(
-          //       padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          //       textStyle: TextStyle(fontSize: 16),
-          //     ),
-          //   ),
-          // ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: ElevatedButton.icon(
+              onPressed: uploadImage,
+              icon: Icon(Icons.filter),
+              label: Text('Publicar'),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                textStyle: TextStyle(fontSize: 16),
+              ),
+            ),
+          ),
         ],
       ),
     );
