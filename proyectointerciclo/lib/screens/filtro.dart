@@ -413,18 +413,18 @@ class _FiltroScreenState extends State<Filtro> {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: ElevatedButton.icon(
-              onPressed: applyFilter,
-              icon: Icon(Icons.filter),
-              label: Text('Aplicar Filtro'),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                textStyle: TextStyle(fontSize: 16),
-              ),
-            ),
-          ),
+          // Padding(
+          //   padding: const EdgeInsets.symmetric(vertical: 8.0),
+          //   child: ElevatedButton.icon(
+          //     onPressed: applyFilter,
+          //     icon: Icon(Icons.filter),
+          //     label: Text('Aplicar Filtro'),
+          //     style: ElevatedButton.styleFrom(
+          //       padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          //       textStyle: TextStyle(fontSize: 16),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );
@@ -436,6 +436,7 @@ class _FiltroScreenState extends State<Filtro> {
         setState(() {
           _selectedFilter = filterName;
         });
+        applyFilter();
       },
       child: Container(
         decoration: BoxDecoration(
