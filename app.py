@@ -3,9 +3,9 @@ import firebase_admin
 from firebase_admin import credentials, firestore, storage, initialize_app
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
-import pycuda.driver as drv
-import pycuda.autoinit
-from pycuda.compiler import SourceModule
+# import pycuda.driver as drv
+# import pycuda.autoinit
+# from pycuda.compiler import SourceModule
 from PIL import Image
 import io
 import time
@@ -34,9 +34,9 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
 # Inicializa PyCUDA
-drv.init()
-device = drv.Device(0)
-context = device.make_context()  # Contexto global para toda la aplicación
+# drv.init()
+# device = drv.Device(0)
+# context = device.make_context()  # Contexto global para toda la aplicación
 
 # Ruta de registro
 @app.route('/register', methods=['POST'])
@@ -410,53 +410,53 @@ def get_profile_image(username):
 
 # Codigo para implementar lo de cuda 
 
-# Kernel CUDA para convoluciones
-mod = SourceModule("""
-    __global__ void applyConvolutionGPU(unsigned char* d_image, double* d_kernel, double* d_result, int width, int height, int kernel_size) {
-        int x = blockIdx.x * blockDim.x + threadIdx.x;
-        int y = blockIdx.y * blockDim.y + threadIdx.y;
-        int half_kernel = kernel_size / 2;
+# # Kernel CUDA para convoluciones
+# mod = SourceModule("""
+#     __global__ void applyConvolutionGPU(unsigned char* d_image, double* d_kernel, double* d_result, int width, int height, int kernel_size) {
+#         int x = blockIdx.x * blockDim.x + threadIdx.x;
+#         int y = blockIdx.y * blockDim.y + threadIdx.y;
+#         int half_kernel = kernel_size / 2;
 
-        if (x < width && y < height) {
-            if (x >= half_kernel && x < width - half_kernel && y >= half_kernel && y < height - half_kernel) {
-                double sum = 0.0;
-                for (int ky = -half_kernel; ky <= half_kernel; ++ky) {
-                    for (int kx = -half_kernel; kx <= half_kernel; ++kx) {
-                        int pixel_value = d_image[(y + ky) * width + (x + kx)];
-                        sum += pixel_value * d_kernel[(ky + half_kernel) * kernel_size + (kx + half_kernel)];
-                    }
-                }
-                d_result[y * width + x] = sum;
-            } else {
-                d_result[y * width + x] = 0;
-            }
-        }
-    }
+#         if (x < width && y < height) {
+#             if (x >= half_kernel && x < width - half_kernel && y >= half_kernel && y < height - half_kernel) {
+#                 double sum = 0.0;
+#                 for (int ky = -half_kernel; ky <= half_kernel; ++ky) {
+#                     for (int kx = -half_kernel; kx <= half_kernel; ++kx) {
+#                         int pixel_value = d_image[(y + ky) * width + (x + kx)];
+#                         sum += pixel_value * d_kernel[(ky + half_kernel) * kernel_size + (kx + half_kernel)];
+#                     }
+#                 }
+#                 d_result[y * width + x] = sum;
+#             } else {
+#                 d_result[y * width + x] = 0;
+#             }
+#         }
+#     }
                    
-    __global__ void applyLinearFilterGPU(unsigned char* d_image, double* d_result, int width, int height, int filter_type, double param1, double param2) {
-        int x = blockIdx.x * blockDim.x + threadIdx.x;
-        int y = blockIdx.y * blockDim.y + threadIdx.y;
-        int idx = y * width + x;
+#     __global__ void applyLinearFilterGPU(unsigned char* d_image, double* d_result, int width, int height, int filter_type, double param1, double param2) {
+#         int x = blockIdx.x * blockDim.x + threadIdx.x;
+#         int y = blockIdx.y * blockDim.y + threadIdx.y;
+#         int idx = y * width + x;
 
-        if (x < width && y < height) {
-            double pixel_value = d_image[idx];
-            if (filter_type == 1) {  // Filtro de Realce de Contraste
-                d_result[idx] = param1 * (pixel_value - 128.0) + param2 + 128.0;
-            } else if (filter_type == 2) {  // Tono Selectivo
-                if (fabs(pixel_value - param1) < param2) {
-                    d_result[idx] = 255.0;  // Resalta tonos similares al objetivo
-                } else {
-                    d_result[idx] = pixel_value * 0.5;  // Reduce tonos lejanos
-                }
-            } else {
-                d_result[idx] = pixel_value;  // Filtro de identidad como fallback
-            }
-        }
-    }
-""")
+#         if (x < width && y < height) {
+#             double pixel_value = d_image[idx];
+#             if (filter_type == 1) {  // Filtro de Realce de Contraste
+#                 d_result[idx] = param1 * (pixel_value - 128.0) + param2 + 128.0;
+#             } else if (filter_type == 2) {  // Tono Selectivo
+#                 if (fabs(pixel_value - param1) < param2) {
+#                     d_result[idx] = 255.0;  // Resalta tonos similares al objetivo
+#                 } else {
+#                     d_result[idx] = pixel_value * 0.5;  // Reduce tonos lejanos
+#                 }
+#             } else {
+#                 d_result[idx] = pixel_value;  // Filtro de identidad como fallback
+#             }
+#         }
+#     }
+# """)
 
-applyConvolutionGPU = mod.get_function("applyConvolutionGPU")
-applyLinearFilterGPU = mod.get_function("applyLinearFilterGPU")
+# applyConvolutionGPU = mod.get_function("applyConvolutionGPU")
+# applyLinearFilterGPU = mod.get_function("applyLinearFilterGPU")
 
 # Funciones para crear kernels
 def create_emboss_kernel(kernel_size):
@@ -491,88 +491,88 @@ def create_high_boost_kernel(kernel_size, A):
     return kernel
 
 # Función para aplicar filtro CUDA con validaciones y manejo de errores detallado
-def apply_filter(image, kernel, width, height, kernel_size):
-    dest = np.zeros_like(image, dtype=np.float64)
-    block_size = (16, 16, 1)
-    grid_size = (int(np.ceil(width / block_size[0])), int(np.ceil(height / block_size[1])), 1)
+# def apply_filter(image, kernel, width, height, kernel_size):
+#     dest = np.zeros_like(image, dtype=np.float64)
+#     block_size = (16, 16, 1)
+#     grid_size = (int(np.ceil(width / block_size[0])), int(np.ceil(height / block_size[1])), 1)
 
-    context.push()
-    try:
-        applyConvolutionGPU(
-            drv.In(image), drv.In(kernel), drv.Out(dest),
-            np.int32(width), np.int32(height), np.int32(kernel_size),
-            block=block_size, grid=grid_size
-        )
-        context.synchronize()
-    finally:
-        context.pop()
+#     context.push()
+#     try:
+#         applyConvolutionGPU(
+#             drv.In(image), drv.In(kernel), drv.Out(dest),
+#             np.int32(width), np.int32(height), np.int32(kernel_size),
+#             block=block_size, grid=grid_size
+#         )
+#         context.synchronize()
+#     finally:
+#         context.pop()
 
-    min_val, max_val = np.min(dest), np.max(dest)
-    normalized_result = ((dest - min_val) / (max_val - min_val) * 255).astype(np.uint8)
-    return normalized_result
+#     min_val, max_val = np.min(dest), np.max(dest)
+#     normalized_result = ((dest - min_val) / (max_val - min_val) * 255).astype(np.uint8)
+#     return normalized_result
 
 # Función para aplicar un filtro lineal
-def apply_linear_filter(image, width, height, filter_type, param1, param2):
-    dest = np.zeros_like(image, dtype=np.float64)
-    block_size = (16, 16, 1)
-    grid_size = (int(np.ceil(width / block_size[0])), int(np.ceil(height / block_size[1])), 1)
+# def apply_linear_filter(image, width, height, filter_type, param1, param2):
+#     dest = np.zeros_like(image, dtype=np.float64)
+#     block_size = (16, 16, 1)
+#     grid_size = (int(np.ceil(width / block_size[0])), int(np.ceil(height / block_size[1])), 1)
 
-    context.push()
-    try:
-        applyLinearFilterGPU(
-            drv.In(image), drv.Out(dest),
-            np.int32(width), np.int32(height), np.int32(filter_type),
-            np.float64(param1), np.float64(param2),
-            block=block_size, grid=grid_size
-        )
-        context.synchronize()
-    finally:
-        context.pop()
+#     context.push()
+#     try:
+#         applyLinearFilterGPU(
+#             drv.In(image), drv.Out(dest),
+#             np.int32(width), np.int32(height), np.int32(filter_type),
+#             np.float64(param1), np.float64(param2),
+#             block=block_size, grid=grid_size
+#         )
+#         context.synchronize()
+#     finally:
+#         context.pop()
 
-    return np.clip(dest, 0, 255).astype(np.uint8)
+#     return np.clip(dest, 0, 255).astype(np.uint8)
 
 # Endpoint para aplicar filtros con validaciones adicionales
-@app.route('/apply-filter', methods=['POST'])
-def apply_filter_endpoint():
+# @app.route('/apply-filter', methods=['POST'])
+# def apply_filter_endpoint():
 
-    try:
-        file = request.files['file']
-        filter_type = request.form.get('filter')
-        kernel_size = int(request.form.get('kernel_size', 5))
+#     try:
+#         file = request.files['file']
+#         filter_type = request.form.get('filter')
+#         kernel_size = int(request.form.get('kernel_size', 5))
 
-        if not file or not filter_type:
-            return jsonify({"error": "Missing file or filter type"}), 400
+#         if not file or not filter_type:
+#             return jsonify({"error": "Missing file or filter type"}), 400
 
-        image = np.array(Image.open(file).convert('L'))
-        height, width = image.shape
+#         image = np.array(Image.open(file).convert('L'))
+#         height, width = image.shape
 
-        if filter_type == 'Emboss':
-            kernel = create_emboss_kernel(kernel_size)
-        elif filter_type == 'Gabor':
-            kernel = create_gabor_kernel(kernel_size, 4.0, 0, 10.0, 0.5, 0)
-        elif filter_type == 'High Boost':
-            kernel = create_high_boost_kernel(kernel_size, 10.0)
+#         if filter_type == 'Emboss':
+#             kernel = create_emboss_kernel(kernel_size)
+#         elif filter_type == 'Gabor':
+#             kernel = create_gabor_kernel(kernel_size, 4.0, 0, 10.0, 0.5, 0)
+#         elif filter_type == 'High Boost':
+#             kernel = create_high_boost_kernel(kernel_size, 10.0)
         
-        if filter_type == 'Contrast Enhancement':
-            alpha = request.form.get('alpha', 1.5)  # Factor de realce
-            beta = request.form.get('beta', 0.5)   # Factor de brillo
-            result = apply_linear_filter(image, width, height, filter_type=1, param1=float(alpha), param2=float(beta))
-        elif filter_type == 'Selective Tone':
-            target_tone = request.form.get('target_tone', 128)  # Tono objetivo
-            adjustment = request.form.get('adjustment', 50)    # Ajuste de brillo
-            result = apply_linear_filter(image, width, height, filter_type=2, param1=float(target_tone), param2=float(adjustment))
-        else:
-            result = apply_filter(image, kernel, width, height, kernel_size)
+#         if filter_type == 'Contrast Enhancement':
+#             alpha = request.form.get('alpha', 1.5)  # Factor de realce
+#             beta = request.form.get('beta', 0.5)   # Factor de brillo
+#             result = apply_linear_filter(image, width, height, filter_type=1, param1=float(alpha), param2=float(beta))
+#         elif filter_type == 'Selective Tone':
+#             target_tone = request.form.get('target_tone', 128)  # Tono objetivo
+#             adjustment = request.form.get('adjustment', 50)    # Ajuste de brillo
+#             result = apply_linear_filter(image, width, height, filter_type=2, param1=float(target_tone), param2=float(adjustment))
+#         else:
+#             result = apply_filter(image, kernel, width, height, kernel_size)
         
-        result_image = Image.fromarray(result)
+#         result_image = Image.fromarray(result)
 
-        byte_io = io.BytesIO()
-        result_image.save(byte_io, 'JPEG')
-        byte_io.seek(0)
-        return send_file(byte_io, mimetype='image/jpeg')
+#         byte_io = io.BytesIO()
+#         result_image.save(byte_io, 'JPEG')
+#         byte_io.seek(0)
+#         return send_file(byte_io, mimetype='image/jpeg')
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
