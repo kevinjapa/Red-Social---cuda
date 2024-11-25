@@ -243,6 +243,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:http_parser/http_parser.dart';
+import 'package:proyectointerciclo/screens/home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Filtro extends StatefulWidget {
@@ -347,6 +348,13 @@ class _FiltroScreenState extends State<Filtro> {
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Imagen subida con éxito')),
+        );
+        
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => Home(),
+          ),
         );
       } else {
         throw Exception('Error subiendo imagen');

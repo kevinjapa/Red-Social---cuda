@@ -16,7 +16,7 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<!-- <string>Proyectointerciclo</string> -->
-	<string>Zonify</string>
+	<string>Zylo</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

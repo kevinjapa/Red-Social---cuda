@@ -237,7 +237,7 @@ class _HomeState extends State<Home> {
             ).createShader(bounds);
           },
           child: Text(
-            'Zonify',
+            'Zylo',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
