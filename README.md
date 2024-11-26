@@ -25,3 +25,45 @@ La aplicación móvil está diseñada para proporcionar a los usuarios una exper
 - **Visualización del Feed:** Ofrecer un feed cronológico que prioriza las publicaciones más recientes, garantizando que los usuarios tengan acceso al contenido más actualizado.
 - **Flexibilidad Técnica: Adaptar** la aplicación a diferentes entornos de desarrollo mediante la configuración dinámica de la URL de la API, asegurando su funcionalidad tanto en entornos de desarrollo como de producción.
 - **Distribución del APK: Generar** un archivo APK optimizado para su instalación en dispositivos Android, permitiendo la distribución directa de la aplicación a los usuarios finales.
+
+# Requerimientos
+
+## Requerimientos de Hardware para el Servidor
+
+| **Componente**            | **Requerimiento**                                              |
+|---------------------------|----------------------------------------------------------------|
+| **Procesador (CPU)**      | Procesador con soporte para virtualización, mínimo 4 núcleos.  |
+| **Tarjeta Gráfica (GPU)** | GPU NVIDIA compatible con CUDA 12.4 y cuDNN.                   |
+| **Memoria RAM**           | 16 GB recomendados (mínimo 8 GB).                              |
+| **Almacenamiento**        | 50 GB disponibles para Docker, imágenes y datos.               |
+| **Red**                   | Conexión a Internet estable.                                   |
+
+## Requerimientos de Software para el Servidor
+
+| **Componente**        | **Requerimiento**                                                                       |
+|-----------------------|-----------------------------------------------------------------------------------------|
+| **Sistema Operativo** | Ubuntu 22.04 LTS, Windows 11 (o cualquier distribución compatible con Docker y NVIDIA). |
+| **Software Principal**| Docker (versión 20.10 o superior) y NVIDIA Container Toolkit.                           |
+| **Librerías**         | PyCUDA, Flask, Firebase Admin SDK, Pillow.                                              |
+| **Otros**             | Git (para gestión de repositorios).                                                     |
+
+## Requerimientos de Hardware para la Aplicación en el Celular
+
+| **Componente**       | **Requerimiento**                                      |
+|-----------------------|-------------------------------------------------------|
+| **Procesador (CPU)**  | Procesador de 8 núcleos, 2 GHz o superior.            |
+| **Memoria RAM**       | Mínimo 4 GB (recomendado 6 GB).                       |
+| **Almacenamiento**    | 200 MB disponibles para instalación y datos locales.  |
+| **Pantalla**          | Resolución mínima de 1280x720.                        |
+| **Red**               | Conexión a Internet estable.                         |
+
+## Requerimientos de Software para la Aplicación en el Celular
+
+| **Componente**            | **Requerimiento**                                                                 |
+|---------------------------|-----------------------------------------------------------------------------------|
+| **Sistema Operativo**     | Android 9.0 (Pie) o superior.                                                     |
+| **Software Principal**    | APK generado a partir del código en Flutter.                                      |
+| **Permisos**              | Acceso a la cámara, almacenamiento y red.                                         |
+| **Servicios Adicionales** | Aplicación de Google Play Services (para garantizar compatibilidad completa).     |
+
+
