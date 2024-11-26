@@ -1,4 +1,3 @@
-
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
 RUN apt-get -qq update && \
@@ -12,6 +11,8 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 COPY . .
 
 RUN mkdir -p static/uploads static/processed
+
+COPY static/LogoUPS.png static/LogoUPS.png
 
 EXPOSE 5001
 
