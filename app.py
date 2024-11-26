@@ -538,7 +538,8 @@ def apply_filter_endpoint():
     try:
         file = request.files['file']
         filter_type = request.form.get('filter')
-        kernel_size = int(request.form.get('kernel_size', 5))
+        kernel_size = int(request.form.get('kernel_size', 21))
+        print(kernel_size)
 
         if not file or not filter_type:
             return jsonify({"error": "Missing file or filter type"}), 400
