@@ -1,3 +1,5 @@
+
+![logo](https://github.com/user-attachments/assets/74b4cf78-ea96-43bd-ac3e-09a9e1688745)
 # Manual tecnico
 ## Universidad Politecnica Salesiana
 ## Integrantes: Jorge Sayago, Pedro Orellana , Kevin Japa
