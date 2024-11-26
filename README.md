@@ -1,7 +1,8 @@
-# Universidad Politecnica Salesiana
-## Manual tecnico
+# Manual tecnico
+## Universidad Politecnica Salesiana
 ## Integrantes: Jorge Sayago, Pedro Orellana , Kevin Japa
-## Materia Computacion Paralela
+## Carrera: Computacion
+## Materia: Computacion Paralela
 
 # Introduccion
 Este manual tecnico ofrece una detallada guía para aquellos involucrados en la implementación, configuración y mantenimiento de esta  Aplicacion tanto para su servidor como para la aplicacion movil diseñada para ofrecer una experiencia social enriquecida y personalizada. La aplicación está orientada a usuarios que deseen compartir contenido visual de manera intuitiva, interactuar con otros a través de "likes" y comentarios, y aplicar filtros avanzados a sus imágenes mediante el uso de Pycuda antes de publicarlas.
