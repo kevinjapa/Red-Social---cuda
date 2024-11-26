@@ -452,10 +452,11 @@ class _PostCardState extends State<PostCard> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: EdgeInsets.zero,
+      margin: EdgeInsets.symmetric(vertical: 10.0), 
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(8),
+      side: BorderSide(color: const Color.fromARGB(255, 219, 219, 219)!, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,7 +468,8 @@ class _PostCardState extends State<PostCard> {
               widget.imageUrl,
               fit: BoxFit.cover,
               width: double.infinity,
-              height: 250,
+              height: null,
+              // height: double.infinity, 
               errorBuilder: (context, error, stackTrace) {
                 return Container(
                   color: Colors.grey[300],
