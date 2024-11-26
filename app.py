@@ -22,7 +22,7 @@ CORS(app)
 cred = credentials.Certificate("app-social-zylo-firebase-adminsdk-22u1k-d75bb0fbbd.json")
 # firebase_admin.initialize_app(cred)
 initialize_app(cred, {
-    'storageBucket': 'app-social-media-552ea.firebasestorage.app'
+    'storageBucket': 'app-social-zylo.firebasestorage.app'
 })
 db = firestore.client()
 
