@@ -19,7 +19,7 @@ import random
 app = Flask(__name__)
 CORS(app)
 # Inicializar Firebase
-cred = credentials.Certificate("app-social-media-552ea-firebase-adminsdk-jc51c-746b9b24f5.json")
+cred = credentials.Certificate("app-social-zylo-firebase-adminsdk-22u1k-d75bb0fbbd.json")
 # firebase_admin.initialize_app(cred)
 initialize_app(cred, {
     'storageBucket': 'app-social-media-552ea.firebasestorage.app'
@@ -548,26 +548,67 @@ def apply_filter_endpoint():
 
         if filter_type == 'Emboss':
             kernel = create_emboss_kernel(kernel_size)
+            result = apply_filter(image, kernel, width, height, kernel_size)
         elif filter_type == 'Gabor':
             kernel = create_gabor_kernel(kernel_size, 4.0, 0, 10.0, 0.5, 0)
+            result = apply_filter(image, kernel, width, height, kernel_size)
         elif filter_type == 'High Boost':
             kernel = create_high_boost_kernel(kernel_size, 10.0)
-        
-        if filter_type == 'Contrast Enhancement':
+            result = apply_filter(image, kernel, width, height, kernel_size)
+        elif filter_type == 'Contrast Enhancement':
             alpha = request.form.get('alpha', 1.5)  # Factor de realce
             beta = request.form.get('beta', 0.5)   # Factor de brillo
-            result = apply_linear_filter(image, width, height, filter_type=1, param1=float(alpha), param2=float(beta))
+            result = apply_linear_filter(image, width, height, filter_type=1, param1=alpha, param2=beta)
+
+            # Cargar y combinar con la imagen de superposición
+            overlay_path = 'static/LogoUPS.png'
+            if not os.path.exists(overlay_path):
+                return jsonify({"error": "Overlay image not found"}), 400
+
+            overlay_image = Image.open(overlay_path).convert('RGBA')
+            print("Overlay image loaded")
+            
+            # Normalizar el resultado antes de convertirlo a imagen
+            result = np.clip(result, 0, 255).astype(np.uint8)
+            result_image = Image.fromarray(result).convert('RGBA')
+
+            # Validar dimensiones del overlay
+            if overlay_image.width is None or overlay_image.height is None:
+                return jsonify({"error": "Overlay image is invalid"}), 500
+
+            # Redimensionar el overlay con validación
+            try:
+                overlay_width = int(width * 0.2)
+                overlay_height = int(overlay_image.height * (overlay_width / overlay_image.width))
+                overlay_image = overlay_image.resize((overlay_width, overlay_height), Image.Resampling.LANCZOS)
+                print(f"Overlay resized to: {overlay_width}x{overlay_height}")
+            except Exception as e:
+                print(f"Error resizing overlay: {e}")
+                return jsonify({"error": f"Error resizing overlay: {e}"}), 500
+
+            # Crear el canvas final y pegar el overlay
+            x_offset, y_offset = 10, 10
+            final_image = result_image.copy()
+            final_image.paste(overlay_image, (x_offset, y_offset), overlay_image)
+            print("Overlay pasted in position")
+
+            # Convertir a RGB antes de guardar en JPEG
+            blended = final_image.convert('RGB')
+
         elif filter_type == 'Selective Tone':
             target_tone = request.form.get('target_tone', 128)  # Tono objetivo
             adjustment = request.form.get('adjustment', 50)    # Ajuste de brillo
             result = apply_linear_filter(image, width, height, filter_type=2, param1=float(target_tone), param2=float(adjustment))
+            blended = Image.fromarray(result)
         else:
-            result = apply_filter(image, kernel, width, height, kernel_size)
+            return jsonify({"error": "Unsupported filter type"}), 400
         
-        result_image = Image.fromarray(result)
-
+        # Guardar y devolver la imagen resultante
         byte_io = io.BytesIO()
-        result_image.save(byte_io, 'JPEG')
+        if filter_type == 'Contrast Enhancement':
+            blended.save(byte_io, 'JPEG')  # Usar la imagen combinada
+        else:
+            Image.fromarray(result).save(byte_io, 'JPEG')  # Usar solo el resultado del filtro
         byte_io.seek(0)
         return send_file(byte_io, mimetype='image/jpeg')
 
